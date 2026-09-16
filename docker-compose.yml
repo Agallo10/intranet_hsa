@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: intranet
+      POSTGRES_PASSWORD: intranet
+      POSTGRES_DB: intranet
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U intranet']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: intranet
+      DATABASE_PASSWORD: intranet
+      DATABASE_NAME: intranet
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET es obligatorio}
+      JWT_ACCESS_TTL: 15m
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET es obligatorio}
+      JWT_REFRESH_TTL: 7d
+      UPLOAD_DIR: /data/uploads
+      MAX_FILE_SIZE_MB: 2048
+      DB_SYNCHRONIZE: 'true'
+      SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_ADMIN_FULLNAME: Administrador
+    volumes:
+      - uploads:/data/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "node dist/seed.js && node dist/main.js"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:
