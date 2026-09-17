@@ -37,8 +37,10 @@ export function Login() {
 
   async function onSubmit(values: LoginValues) {
     try {
-      await login(values.username, values.password)
-      navigate(from, { replace: true })
+      const user = await login(values.username, values.password)
+      navigate(user.mustChangePassword ? '/cambiar-contrasena' : from, {
+        replace: true,
+      })
     } catch (err) {
       setError('root', { message: getErrorMessage(err) })
     }

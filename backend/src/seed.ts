@@ -21,14 +21,16 @@ async function run() {
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'admin';
   const existing = await usersService.findByUsername(adminUsername);
   if (!existing) {
-    await usersService.create({
+    const admin = await usersService.create({
       username: adminUsername,
       password: process.env.SEED_ADMIN_PASSWORD ?? 'admin123',
       fullName: process.env.SEED_ADMIN_FULLNAME ?? 'Administrador',
       role: Role.Admin,
     });
+    await usersService.clearMustChangePassword(admin.id);
     console.log(`Usuario admin "${adminUsername}" creado.`);
   } else {
+    await usersService.clearMustChangePassword(existing.id);
     console.log(`Usuario admin "${adminUsername}" ya existe.`);
   }
 

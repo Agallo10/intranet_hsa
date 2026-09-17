@@ -15,6 +15,7 @@ export const toUserDto = (user: User) => ({
   fullName: user.fullName,
   role: user.role,
   isActive: user.isActive,
+  mustChangePassword: user.mustChangePassword,
   createdAt: user.createdAt,
 });
 
@@ -49,6 +50,7 @@ export class UsersService {
       fullName: dto.fullName,
       role: dto.role,
       isActive: true,
+      mustChangePassword: true,
     });
     return this.usersRepository.save(user);
   }
@@ -63,7 +65,22 @@ export class UsersService {
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
     if (dto.password !== undefined) {
       user.passwordHash = await bcrypt.hash(dto.password, 10);
+      user.mustChangePassword = true;
     }
     return this.usersRepository.save(user);
+  }
+
+  async changePassword(id: string, newPassword: string): Promise<User> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.mustChangePassword = false;
+    return this.usersRepository.save(user);
+  }
+
+  async clearMustChangePassword(id: string): Promise<void> {
+    await this.usersRepository.update(id, { mustChangePassword: false });
   }
 }

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { UserPlus } from 'lucide-react'
+import { KeyRound, UserPlus } from 'lucide-react'
 import { api, getErrorMessage } from '../../lib/api'
 import type { Role, UserDto } from '../../lib/types'
 import { userSchema, type UserValues } from '../../lib/validations'
@@ -25,12 +25,22 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export function Users() {
   const queryClient = useQueryClient()
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [pwUser, setPwUser] = useState<UserDto | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [pwError, setPwError] = useState('')
 
   const {
     register,
@@ -79,6 +89,28 @@ export function Users() {
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (vars: { id: string; password: string }) => {
+      await api.patch(`/users/${vars.id}`, { password: vars.password })
+    },
+    onSuccess: () => {
+      setPwUser(null)
+      setNewPassword('')
+      setPwError('')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err) => setPwError(getErrorMessage(err)),
+  })
+
+  function submitPasswordChange() {
+    if (!pwUser) return
+    if (newPassword.length < 6) {
+      setPwError('La contraseña debe tener al menos 6 caracteres')
+      return
+    }
+    changePasswordMutation.mutate({ id: pwUser.id, password: newPassword })
+  }
 
   function onSubmit(values: UserValues) {
     createMutation.mutate(values)
@@ -132,23 +164,49 @@ export function Users() {
         ),
     },
     {
+      accessorKey: 'mustChangePassword',
+      header: 'Contraseña',
+      cell: ({ row }) =>
+        row.original.mustChangePassword ? (
+          <Badge variant="outline" className="text-amber-600">
+            Debe cambiar contraseña
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
       id: 'actions',
       header: 'Acciones',
       cell: ({ row }) => {
         const user = row.original
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              updateMutation.mutate({
-                id: user.id,
-                data: { isActive: !user.isActive },
-              })
-            }
-          >
-            {user.isActive ? 'Desactivar' : 'Activar'}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPwUser(user)
+                setNewPassword('')
+                setPwError('')
+              }}
+            >
+              <KeyRound className="size-4" />
+              Contraseña
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                updateMutation.mutate({
+                  id: user.id,
+                  data: { isActive: !user.isActive },
+                })
+              }
+            >
+              {user.isActive ? 'Desactivar' : 'Activar'}
+            </Button>
+          </div>
         )
       },
     },
@@ -257,6 +315,44 @@ export function Users() {
         searchPlaceholder="Buscar usuario..."
         emptyMessage="No hay usuarios"
       />
+
+      <Dialog open={!!pwUser} onOpenChange={(open) => !open && setPwUser(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambiar contraseña</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Usuario: <span className="font-medium">{pwUser?.fullName}</span>
+            </p>
+            <div className="space-y-1.5">
+              <Label htmlFor="new-password">Nueva contraseña temporal</Label>
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            {pwError && (
+              <Alert variant="destructive">
+                <AlertDescription>{pwError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPwUser(null)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={submitPasswordChange}
+              disabled={changePasswordMutation.isPending}
+            >
+              Cambiar contraseña
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

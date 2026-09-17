@@ -10,6 +10,13 @@ export function RequireAuth({ roles }: { roles?: Role[] }) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  if (
+    user?.mustChangePassword &&
+    location.pathname !== '/cambiar-contrasena'
+  ) {
+    return <Navigate to="/cambiar-contrasena" replace />
+  }
+
   if (roles && roles.length > 0 && user && !roles.includes(user.role)) {
     return <Navigate to="/" replace />
   }

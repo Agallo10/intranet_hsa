@@ -7,6 +7,7 @@ export type UserDto = {
   fullName: string
   role: Role
   isActive: boolean
+  mustChangePassword: boolean
   createdAt?: string
 }
 

@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { Login } from './pages/Login'
+import { CambiarContrasena } from './pages/CambiarContrasena'
 import { Noticias } from './pages/Noticias'
 import { NoticiaDetalle } from './pages/NoticiaDetalle'
 import { NoticiaForm } from './pages/NoticiaForm'
@@ -17,6 +18,7 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route element={<RequireAuth />}>
+        <Route path="cambiar-contrasena" element={<CambiarContrasena />} />
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/noticias" replace />} />
 

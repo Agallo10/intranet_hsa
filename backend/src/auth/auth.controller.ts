@@ -3,8 +3,9 @@ import { AuthService } from './auth.service.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { LoginDto } from './dto/login.dto.js';
 import { RefreshDto } from './dto/refresh.dto.js';
+import { ChangePasswordDto } from './dto/change-password.dto.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
-import { UsersService } from '../users/users.service.js';
+import { UsersService, toUserDto } from '../users/users.service.js';
 
 @Controller('auth')
 export class AuthController {
@@ -30,6 +31,7 @@ export class AuthController {
         fullName: user.fullName,
         role: user.role,
         isActive: user.isActive,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
@@ -46,12 +48,18 @@ export class AuthController {
     if (!user) {
       throw new UnauthorizedException();
     }
-    return {
-      id: user.id,
-      username: user.username,
-      fullName: user.fullName,
-      role: user.role,
-      isActive: user.isActive,
-    };
+    return toUserDto(user);
+  }
+
+  @Post('change-password')
+  async changePassword(
+    @Req() req: { user: AuthUser },
+    @Body() dto: ChangePasswordDto,
+  ) {
+    const user = await this.usersService.changePassword(
+      req.user.userId,
+      dto.password,
+    );
+    return toUserDto(user);
   }
 }

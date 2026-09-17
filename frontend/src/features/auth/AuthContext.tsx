@@ -13,8 +13,9 @@ import type { LoginResponse, UserDto } from '../../lib/types'
 interface AuthContextValue {
   user: UserDto | null
   isAuthenticated: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string) => Promise<UserDto>
   logout: () => void
+  updateUser: (user: UserDto) => void
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -31,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.setTokens(accessToken, refreshToken)
     tokenStore.setUser(user)
     setUser(user)
+    return user
   }, [])
 
   const logout = useCallback(() => {
@@ -38,9 +40,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }, [])
 
+  const updateUser = useCallback((next: UserDto) => {
+    tokenStore.setUser(next)
+    setUser(next)
+  }, [])
+
   const value = useMemo(
-    () => ({ user, isAuthenticated: user !== null, login, logout }),
-    [user, login, logout],
+    () => ({ user, isAuthenticated: user !== null, login, logout, updateUser }),
+    [user, login, logout, updateUser],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

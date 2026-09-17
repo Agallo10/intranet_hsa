@@ -4,12 +4,13 @@ import { JwtModule } from '@nestjs/jwt';
 import { MulterModule } from '@nestjs/platform-express';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { diskStorage } from 'multer';
+import { mkdirSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { Noticia } from './noticia.entity.js';
 import { NewsService } from './news.service.js';
 import { NewsController } from './news.controller.js';
-import { ensureParentDir, resolveUploadDir, safeExt } from '../common/storage.js';
+import { resolveUploadDir, safeExt } from '../common/storage.js';
 
 const ALLOWED_IMAGES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
@@ -25,7 +26,7 @@ const ALLOWED_IMAGES = new Set(['image/jpeg', 'image/png', 'image/webp']);
         return {
           storage: diskStorage({
             destination: (_req, _file, cb) => {
-              ensureParentDir(newsDir);
+              mkdirSync(newsDir, { recursive: true });
               cb(null, newsDir);
             },
             filename: (_req, file, cb) => {

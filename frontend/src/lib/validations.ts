@@ -67,3 +67,15 @@ export const videoSchema = z.object({
 })
 
 export type VideoValues = z.infer<typeof videoSchema>
+
+export const changePasswordSchema = z
+  .object({
+    password: z.string().min(6, 'Mínimo 6 caracteres'),
+    confirm: z.string(),
+  })
+  .refine((v) => v.password === v.confirm, {
+    message: 'Las contraseñas no coinciden',
+    path: ['confirm'],
+  })
+
+export type ChangePasswordValues = z.infer<typeof changePasswordSchema>

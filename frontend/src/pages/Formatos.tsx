@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, FileText, Plus, Upload } from 'lucide-react'
+import { Download, FileText, Plus, Trash2, Upload } from 'lucide-react'
 import { api, getErrorMessage } from '../lib/api'
 import type { CategoryDto, ContentDto, ListResponse } from '../lib/types'
 import { documentSchema, type DocumentValues } from '../lib/validations'
@@ -52,6 +52,15 @@ export function Formatos() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/contents/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['contents', 'documents'] })
+    },
+  })
+
   async function download(content: ContentDto) {
     const res = await api.get(`/contents/${content.id}/file`, {
       responseType: 'blob',
@@ -97,14 +106,31 @@ export function Formatos() {
       id: 'actions',
       header: '',
       cell: ({ row }) => (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => download(row.original)}
-        >
-          <Download className="size-4" />
-          Descargar
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => download(row.original)}
+          >
+            <Download className="size-4" />
+            Descargar
+          </Button>
+          {(user?.role === 'admin' ||
+            row.original.uploadedBy?.id === user?.id) && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Eliminar documento"
+              onClick={() => {
+                if (confirm('¿Eliminar este documento?')) {
+                  deleteMutation.mutate(row.original.id)
+                }
+              }}
+            >
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
+          )}
+        </div>
       ),
     },
   ]

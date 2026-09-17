@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Newspaper } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, Pencil, Newspaper, Trash2 } from 'lucide-react'
 import { api } from '../lib/api'
 import { authedUrl } from '../lib/token'
 import { useAuth } from '../features/auth/AuthContext'
@@ -13,14 +13,25 @@ import { Skeleton } from '@/components/ui/skeleton'
 
 export function NoticiaDetalle() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuth()
-  const canEdit = user?.role === 'admin' || user?.role === 'comunicador'
 
   const query = useQuery({
     queryKey: ['news', id],
     queryFn: async () => {
       const res = await api.get<NoticiaDto>(`/news/${id}`)
       return res.data
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      await api.delete(`/news/${id}`)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['news'] })
+      navigate('/noticias')
     },
   })
 
@@ -46,6 +57,7 @@ export function NoticiaDetalle() {
   }
 
   const n = query.data
+  const canEdit = user?.role === 'admin' || n.author?.id === user?.id
 
   return (
     <div>
@@ -57,12 +69,26 @@ export function NoticiaDetalle() {
           </Link>
         </Button>
         {canEdit && (
-          <Button variant="outline" size="sm" asChild>
-            <Link to={`/noticias/${n.id}/editar`}>
-              <Pencil className="size-4" />
-              Editar
-            </Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" asChild>
+              <Link to={`/noticias/${n.id}/editar`}>
+                <Pencil className="size-4" />
+                Editar
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (confirm('¿Eliminar esta noticia?')) {
+                  deleteMutation.mutate()
+                }
+              }}
+            >
+              <Trash2 className="size-4 text-destructive" />
+              Eliminar
+            </Button>
+          </div>
         )}
       </div>
 
