@@ -8,6 +8,7 @@ import type { CategoryDto, ContentDto, ListResponse } from '../lib/types'
 import { documentSchema, type DocumentValues } from '../lib/validations'
 import { useAuth } from '../features/auth/AuthContext'
 import { DataTable } from '../components/data-table/data-table'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -117,18 +118,17 @@ export function Formatos() {
           </Button>
           {(user?.role === 'admin' ||
             row.original.uploadedBy?.id === user?.id) && (
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Eliminar documento"
-              onClick={() => {
-                if (confirm('¿Eliminar este documento?')) {
-                  deleteMutation.mutate(row.original.id)
-                }
-              }}
-            >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
+            <ConfirmDialog
+              title="Eliminar documento"
+              description="El documento y su archivo se eliminarán permanentemente."
+              confirmLabel="Eliminar"
+              onConfirm={() => deleteMutation.mutate(row.original.id)}
+              trigger={
+                <Button variant="ghost" size="icon" aria-label="Eliminar documento">
+                  <Trash2 className="size-4 text-destructive" />
+                </Button>
+              }
+            />
           )}
         </div>
       ),

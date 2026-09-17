@@ -7,6 +7,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import type { NoticiaDto } from '../lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -76,18 +77,18 @@ export function NoticiaDetalle() {
                 Editar
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (confirm('¿Eliminar esta noticia?')) {
-                  deleteMutation.mutate()
-                }
-              }}
-            >
-              <Trash2 className="size-4 text-destructive" />
-              Eliminar
-            </Button>
+            <ConfirmDialog
+              title="Eliminar noticia"
+              description="Esta acción no se puede deshacer. La noticia se eliminará permanentemente."
+              confirmLabel="Eliminar"
+              onConfirm={() => deleteMutation.mutate()}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Trash2 className="size-4 text-destructive" />
+                  Eliminar
+                </Button>
+              }
+            />
           </div>
         )}
       </div>

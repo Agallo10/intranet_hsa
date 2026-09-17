@@ -17,6 +17,7 @@ import { useAuth } from '../features/auth/AuthContext'
 import type { ContentDto, CursoDetalleDto } from '../lib/types'
 import { videoSchema, type VideoValues } from '../lib/validations'
 import { Button } from '@/components/ui/button'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
@@ -171,18 +172,21 @@ export function CursoDetalle() {
                     Reproducir
                   </Button>
                   {canManage && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Eliminar video"
-                      onClick={() => {
-                        if (confirm('¿Eliminar este video?')) {
-                          deleteVideoMutation.mutate(video.id)
-                        }
-                      }}
-                    >
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
+                    <ConfirmDialog
+                      title="Eliminar video"
+                      description="El video y su archivo se eliminarán permanentemente."
+                      confirmLabel="Eliminar"
+                      onConfirm={() => deleteVideoMutation.mutate(video.id)}
+                      trigger={
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label="Eliminar video"
+                        >
+                          <Trash2 className="size-4 text-destructive" />
+                        </Button>
+                      }
+                    />
                   )}
                 </li>
               ))}
@@ -194,21 +198,18 @@ export function CursoDetalle() {
       {canManage && (
         <div className="mt-6">
           <Separator className="mb-4" />
-          <Button
-            variant="destructive"
-            onClick={() => {
-              if (
-                confirm(
-                  '¿Eliminar este curso? Esta acción es permanente.',
-                )
-              ) {
-                deleteCourseMutation.mutate()
-              }
-            }}
-          >
-            <Trash2 className="size-4" />
-            Eliminar curso
-          </Button>
+          <ConfirmDialog
+            title="Eliminar curso"
+            description="Esta acción es permanente y no se puede deshacer."
+            confirmLabel="Eliminar curso"
+            onConfirm={() => deleteCourseMutation.mutate()}
+            trigger={
+              <Button variant="destructive">
+                <Trash2 className="size-4" />
+                Eliminar curso
+              </Button>
+            }
+          />
         </div>
       )}
 
