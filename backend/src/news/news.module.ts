@@ -10,6 +10,7 @@ import { join } from 'node:path';
 import { Noticia } from './noticia.entity.js';
 import { NewsService } from './news.service.js';
 import { NewsController } from './news.controller.js';
+import { AuditModule } from '../audit/audit.module.js';
 import { resolveUploadDir, safeExt } from '../common/storage.js';
 
 const ALLOWED_IMAGES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -18,6 +19,7 @@ const ALLOWED_IMAGES = new Set(['image/jpeg', 'image/png', 'image/webp']);
   imports: [
     TypeOrmModule.forFeature([Noticia]),
     JwtModule.register({}),
+    AuditModule,
     MulterModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {

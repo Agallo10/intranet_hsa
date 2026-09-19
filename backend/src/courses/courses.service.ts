@@ -10,6 +10,7 @@ import { Curso } from './curso.entity.js';
 import { CreateCourseDto, UpdateCourseDto } from './dto/course.dto.js';
 import { Role } from '../common/role.enum.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
+import { AuditService } from '../audit/audit.service.js';
 
 export const toCourseDto = (curso: Curso) => ({
   id: curso.id,
@@ -28,6 +29,7 @@ export class CoursesService {
   constructor(
     @InjectRepository(Curso)
     private readonly coursesRepository: Repository<Curso>,
+    private readonly auditService: AuditService,
   ) {}
 
   async findById(id: string): Promise<Curso | null> {
@@ -113,6 +115,15 @@ export class CoursesService {
     }
 
     await this.coursesRepository.remove(curso);
+
+    await this.auditService
+      .record({
+        action: 'course.delete',
+        userId: user.userId,
+        username: user.username,
+        details: `Curso "${curso.title}" eliminado`,
+      })
+      .catch(() => undefined);
   }
 
   private assertCanModify(curso: Curso, user: AuthUser): void {

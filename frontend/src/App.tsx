@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { RequireAuth } from './components/RequireAuth'
 import { Login } from './pages/Login'
 import { CambiarContrasena } from './pages/CambiarContrasena'
+import { Privacidad } from './pages/Privacidad'
 import { Noticias } from './pages/Noticias'
 import { NoticiaDetalle } from './pages/NoticiaDetalle'
 import { NoticiaForm } from './pages/NoticiaForm'
@@ -12,11 +13,13 @@ import { CursoDetalle } from './pages/CursoDetalle'
 import { CursoForm } from './pages/CursoForm'
 import { Users } from './pages/admin/Users'
 import { Categories } from './pages/admin/Categories'
+import { Auditoria } from './pages/admin/Auditoria'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/privacidad" element={<Privacidad />} />
       <Route element={<RequireAuth />}>
         <Route path="cambiar-contrasena" element={<CambiarContrasena />} />
         <Route element={<Layout />}>
@@ -41,6 +44,7 @@ export default function App() {
           <Route element={<RequireAuth roles={['admin']} />}>
             <Route path="admin/usuarios" element={<Users />} />
             <Route path="admin/categorias" element={<Categories />} />
+            <Route path="admin/auditoria" element={<Auditoria />} />
           </Route>
         </Route>
       </Route>

@@ -1,6 +1,6 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import { useAuth } from '../features/auth/AuthContext'
 import { getErrorMessage } from '../lib/api'
@@ -102,6 +102,12 @@ export function Login() {
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? 'Ingresando...' : 'Ingresar'}
             </Button>
+
+            <p className="text-center text-xs text-muted-foreground">
+              <Link to="/privacidad" className="hover:underline">
+                Aviso de privacidad y política de tratamiento de datos
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>

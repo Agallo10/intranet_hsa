@@ -20,6 +20,7 @@ import { AuthUser } from '../common/guards/roles.guard.js';
 import { CategoriesService } from '../categories/categories.service.js';
 import { Curso } from '../courses/curso.entity.js';
 import { ContentType } from '../common/content-type.enum.js';
+import { AuditService } from '../audit/audit.service.js';
 
 export interface ListContentsQuery {
   q?: string;
@@ -69,6 +70,7 @@ export class ContentsService {
     private readonly categoriesService: CategoriesService,
     @InjectRepository(Curso)
     private readonly cursosRepository: Repository<Curso>,
+    private readonly auditService: AuditService,
   ) {
     this.config = config;
     this.uploadDir = resolveUploadDir(config.get<string>('UPLOAD_DIR'));
@@ -227,6 +229,15 @@ export class ContentsService {
     const fullPath = this.getFilePath(content);
     await this.contentsRepository.remove(content);
     await unlink(fullPath).catch(() => undefined);
+
+    await this.auditService
+      .record({
+        action: 'content.delete',
+        userId: user.userId,
+        username: user.username,
+        details: `Documento/video "${content.title}" eliminado`,
+      })
+      .catch(() => undefined);
   }
 
   getFilePath(content: Content): string {

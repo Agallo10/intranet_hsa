@@ -12,6 +12,7 @@ import { CreateNewsInput, UpdateNewsDto } from './dto/news.dto.js';
 import { Role } from '../common/role.enum.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
 import { resolveUploadDir, resolveUploadPath } from '../common/storage.js';
+import { AuditService } from '../audit/audit.service.js';
 
 export const toNewsDto = (noticia: Noticia) => ({
   id: noticia.id,
@@ -36,6 +37,7 @@ export class NewsService {
     @InjectRepository(Noticia)
     private readonly newsRepository: Repository<Noticia>,
     config: ConfigService,
+    private readonly auditService: AuditService,
   ) {
     this.uploadDir = resolveUploadDir(config.get<string>('UPLOAD_DIR'));
   }
@@ -136,6 +138,15 @@ export class NewsService {
         () => undefined,
       );
     }
+
+    await this.auditService
+      .record({
+        action: 'news.delete',
+        userId: user.userId,
+        username: user.username,
+        details: `Noticia "${noticia.title}" eliminada`,
+      })
+      .catch(() => undefined);
   }
 
   getCoverPath(noticia: Noticia): string | null {

@@ -11,6 +11,7 @@ import { Curso } from '../courses/curso.entity.js';
 import { ContentsService } from './contents.service.js';
 import { ContentsController } from './contents.controller.js';
 import { CategoriesModule } from '../categories/categories.module.js';
+import { AuditModule } from '../audit/audit.module.js';
 import { ensureParentDir, resolveUploadDir } from '../common/storage.js';
 
 const safeExt = (originalName: string): string => {
@@ -23,6 +24,7 @@ const safeExt = (originalName: string): string => {
     TypeOrmModule.forFeature([Content, Curso]),
     JwtModule.register({}),
     CategoriesModule,
+    AuditModule,
     MulterModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {

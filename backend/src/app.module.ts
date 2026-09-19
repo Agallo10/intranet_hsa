@@ -9,6 +9,7 @@ import { CategoriesModule } from './categories/categories.module.js';
 import { ContentsModule } from './contents/contents.module.js';
 import { CoursesModule } from './courses/courses.module.js';
 import { NewsModule } from './news/news.module.js';
+import { AuditModule } from './audit/audit.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 
@@ -37,6 +38,7 @@ import { RolesGuard } from './common/guards/roles.guard.js';
     ContentsModule,
     CoursesModule,
     NewsModule,
+    AuditModule,
   ],
   controllers: [AppController],
   providers: [

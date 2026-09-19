@@ -5,6 +5,7 @@ import {
   GraduationCap,
   Users,
   Tags,
+  History,
   LogOut,
 } from 'lucide-react'
 import { cn } from 'cn'
@@ -66,6 +67,10 @@ export function Layout() {
               <NavLink to="/admin/categorias" className={navLinkClass}>
                 <Tags className="size-4" />
                 Categorías
+              </NavLink>
+              <NavLink to="/admin/auditoria" className={navLinkClass}>
+                <History className="size-4" />
+                Registro de accesos
               </NavLink>
             </>
           )}

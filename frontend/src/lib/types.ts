@@ -77,3 +77,14 @@ export type ListResponse<T> = {
   page: number
   limit: number
 }
+
+export type AuditLogDto = {
+  id: string
+  action: string
+  userId: string | null
+  username: string | null
+  details: string | null
+  ip: string | null
+  userAgent: string | null
+  createdAt: string
+}
