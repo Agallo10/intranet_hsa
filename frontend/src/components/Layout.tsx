@@ -6,10 +6,12 @@ import {
   Users,
   Tags,
   History,
+  MessageSquare,
   LogOut,
 } from 'lucide-react'
 import { cn } from 'cn'
 import { useAuth } from '../features/auth/AuthContext'
+import { useSocket } from '../features/chat/SocketContext'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
@@ -23,6 +25,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 
 export function Layout() {
   const { user, logout } = useAuth()
+  const { totalUnread } = useSocket()
   const isAdmin = user?.role === 'admin'
 
   return (
@@ -52,6 +55,15 @@ export function Layout() {
           <NavLink to="/tutoriales" className={navLinkClass}>
             <GraduationCap className="size-4" />
             Tutoriales
+          </NavLink>
+          <NavLink to="/chat" className={navLinkClass}>
+            <MessageSquare className="size-4" />
+            Chat
+            {totalUnread > 0 && (
+              <span className="ml-auto rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-primary-foreground">
+                {totalUnread}
+              </span>
+            )}
           </NavLink>
 
           {isAdmin && (

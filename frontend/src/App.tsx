@@ -9,6 +9,7 @@ import { NoticiaDetalle } from './pages/NoticiaDetalle'
 import { NoticiaForm } from './pages/NoticiaForm'
 import { Formatos } from './pages/Formatos'
 import { Tutoriales } from './pages/Tutoriales'
+import { Chat } from './pages/Chat'
 import { CursoDetalle } from './pages/CursoDetalle'
 import { CursoForm } from './pages/CursoForm'
 import { Users } from './pages/admin/Users'
@@ -33,6 +34,7 @@ export default function App() {
           </Route>
 
           <Route path="formatos" element={<Formatos />} />
+          <Route path="chat" element={<Chat />} />
 
           <Route path="tutoriales" element={<Tutoriales />} />
           <Route path="tutoriales/:id" element={<CursoDetalle />} />

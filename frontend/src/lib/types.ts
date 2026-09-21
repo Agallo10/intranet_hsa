@@ -88,3 +88,28 @@ export type AuditLogDto = {
   userAgent: string | null
   createdAt: string
 }
+
+export type ChatUserDto = {
+  id: string
+  fullName: string
+  username: string
+  role: Role
+}
+
+export type MessageDto = {
+  id: string
+  senderId: string
+  receiverId: string
+  content: string | null
+  attachmentName: string | null
+  attachmentMime: string | null
+  attachmentSize: number | null
+  isRead: boolean
+  createdAt: string
+}
+
+export type ConversationDto = {
+  user: ChatUserDto
+  lastMessage: MessageDto | null
+  unreadCount: number
+}
