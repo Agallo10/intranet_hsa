@@ -30,6 +30,7 @@ export function Chat() {
   const queryClient = useQueryClient()
 
   const [activeUserId, setActiveUserId] = useState<string | null>(null)
+  const [activeUser, setActiveUser] = useState<ChatUserDto | null>(null)
   const [searchQ, setSearchQ] = useState('')
   const [searching, setSearching] = useState(false)
   const [text, setText] = useState('')
@@ -113,11 +114,12 @@ export function Chat() {
     })
   }, [messagesQuery.data])
 
-  function selectUser(id: string) {
-    setActiveUserId(id)
+  function selectUser(person: ChatUserDto) {
+    setActiveUserId(person.id)
+    setActiveUser(person)
     setSearching(false)
     setSearchQ('')
-    markRead(id)
+    markRead(person.id)
   }
 
   function handleTextChange(value: string) {
@@ -142,10 +144,6 @@ export function Chat() {
     if (fileRef.current) fileRef.current.value = ''
     sendMutation.mutate(form)
   }
-
-  const activeUser = conversationsQuery.data?.find(
-    (c) => c.user.id === activeUserId,
-  )?.user
 
   const displayedUsers = searching
     ? usersQuery.data ?? []
@@ -200,7 +198,7 @@ export function Chat() {
             return (
               <button
                 key={person.id}
-                onClick={() => selectUser(person.id)}
+                onClick={() => selectUser(person)}
                 className={cn(
                   'flex w-full items-center gap-3 px-3 py-3 text-left hover:bg-muted/50',
                   activeUserId === person.id && 'bg-muted',
