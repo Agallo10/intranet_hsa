@@ -78,7 +78,8 @@ cp backend/.env.example backend/.env
 ### Frontend
 
 En desarrollo **no requiere** variables (usa el proxy de Vite hacia `http://localhost:3000/api`).
-Para un build de producción fuera de Docker se puede definir `VITE_API_URL`.
+En producción el frontend se sirve con Nginx, que hace de proxy de `/api` y `/socket.io` hacia el
+backend. No se requieren variables de entorno en el frontend.
 
 ## 5. Cómo iniciar el sistema
 
