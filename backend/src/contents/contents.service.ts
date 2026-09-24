@@ -41,6 +41,7 @@ export const toContentDto = (content: Content) => ({
   originalName: content.originalName,
   mimeType: content.mimeType,
   sizeBytes: content.sizeBytes,
+  embedUrl: content.embedUrl,
   isPublished: content.isPublished,
   cursoId: content.cursoId,
   position: content.position,
@@ -82,17 +83,28 @@ export class ContentsService {
 
   async create(
     input: CreateContentInput,
-    file: Express.Multer.File,
+    file: Express.Multer.File | undefined,
     user: AuthUser,
   ): Promise<Content> {
     try {
-      validateContentFile(
-        file.mimetype,
-        input.type,
-        file.size,
-        this.maxFileSizeBytes(),
-      );
-      await validateFileSignature(file.path, file.mimetype);
+      if (input.type === ContentType.Video && !file && !input.embedUrl) {
+        throw new BadRequestException(
+          'Un video requiere un archivo o una URL embebida',
+        );
+      }
+      if (input.type === ContentType.Document && !file) {
+        throw new BadRequestException('Debe adjuntar un archivo');
+      }
+
+      if (file) {
+        validateContentFile(
+          file.mimetype,
+          input.type,
+          file.size,
+          this.maxFileSizeBytes(),
+        );
+        await validateFileSignature(file.path, file.mimetype);
+      }
 
       if (input.categoryId) {
         await this.assertCategoryValid(input.categoryId);
@@ -110,10 +122,11 @@ export class ContentsService {
         title: input.title,
         description: input.description ?? null,
         type: input.type,
-        filePath: file.filename,
-        originalName: file.originalname,
-        mimeType: file.mimetype,
-        sizeBytes: file.size,
+        filePath: file ? file.filename : null,
+        embedUrl: input.embedUrl ?? null,
+        originalName: file ? file.originalname : null,
+        mimeType: file ? file.mimetype : null,
+        sizeBytes: file ? file.size : null,
         isPublished: input.isPublished,
         categoryId: input.categoryId ?? null,
         cursoId: input.cursoId ?? null,
@@ -127,7 +140,9 @@ export class ContentsService {
         relations: { category: true, uploadedBy: true },
       });
     } catch (err) {
-      await unlink(file.path).catch(() => undefined);
+      if (file) {
+        await unlink(file.path).catch(() => undefined);
+      }
       throw err;
     }
   }
@@ -228,7 +243,9 @@ export class ContentsService {
 
     const fullPath = this.getFilePath(content);
     await this.contentsRepository.remove(content);
-    await unlink(fullPath).catch(() => undefined);
+    if (fullPath) {
+      await unlink(fullPath).catch(() => undefined);
+    }
 
     await this.auditService
       .record({
@@ -240,7 +257,8 @@ export class ContentsService {
       .catch(() => undefined);
   }
 
-  getFilePath(content: Content): string {
+  getFilePath(content: Content): string | null {
+    if (!content.filePath) return null;
     return resolveUploadPath(this.uploadDir, content.filePath);
   }
 

@@ -25,9 +25,10 @@ export type ContentDto = {
   title: string
   description: string | null
   type: ContentType
-  originalName: string
-  mimeType: string
-  sizeBytes: number
+  originalName: string | null
+  mimeType: string | null
+  sizeBytes: number | null
+  embedUrl: string | null
   isPublished: boolean
   cursoId: string | null
   position: number
@@ -35,6 +36,21 @@ export type ContentDto = {
   updatedAt: string
   category: { id: string; name: string; slug: string } | null
   uploadedBy: { id: string; fullName: string } | null
+}
+
+export type NewsCategoryDto = {
+  id: string
+  name: string
+  slug: string
+  isActive: boolean
+}
+
+export type NoticiaMediaDto = {
+  id: string
+  type: 'video' | 'audio'
+  originalName: string
+  mimeType: string
+  sizeBytes: number
 }
 
 export type NoticiaDto = {
@@ -47,6 +63,8 @@ export type NoticiaDto = {
   publishedAt: string | null
   createdAt: string
   updatedAt: string
+  category: { id: string; name: string; slug: string } | null
+  media?: NoticiaMediaDto[]
   author: { id: string; fullName: string } | null
 }
 

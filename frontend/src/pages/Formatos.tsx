@@ -69,7 +69,7 @@ export function Formatos() {
     const url = window.URL.createObjectURL(res.data as Blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = content.originalName
+    a.download = content.originalName ?? 'documento'
     document.body.appendChild(a)
     a.click()
     a.remove()
@@ -95,7 +95,7 @@ export function Formatos() {
     {
       accessorKey: 'sizeBytes',
       header: 'Tamaño',
-      cell: ({ row }) => formatBytes(row.original.sizeBytes),
+      cell: ({ row }) => formatBytes(row.original.sizeBytes ?? 0),
     },
     {
       accessorKey: 'createdAt',

@@ -28,23 +28,27 @@ export class Content {
   @Column({ type: 'enum', enum: ContentType })
   type: ContentType;
 
-  @Column()
-  filePath: string;
+  @Column({ type: 'varchar', nullable: true })
+  filePath: string | null;
 
-  @Column()
-  originalName: string;
+  @Column({ type: 'varchar', nullable: true })
+  embedUrl: string | null;
 
-  @Column()
-  mimeType: string;
+  @Column({ type: 'varchar', nullable: true })
+  originalName: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  mimeType: string | null;
 
   @Column({
     type: 'bigint',
+    nullable: true,
     transformer: {
-      to: (value: number) => value,
-      from: (value: string | null) => (value === null ? 0 : Number(value)),
+      to: (value: number | null) => value,
+      from: (value: string | null) => (value === null ? null : Number(value)),
     },
   })
-  sizeBytes: number;
+  sizeBytes: number | null;
 
   @Column({ default: false })
   isPublished: boolean;

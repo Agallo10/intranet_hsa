@@ -71,7 +71,7 @@ export class ContentsController {
   @Roles(Role.Admin, Role.Editor)
   @UseInterceptors(FileInterceptor('file'))
   async create(
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFile() file: Express.Multer.File | undefined,
     @Body()
     body: {
       title?: string;
@@ -80,18 +80,21 @@ export class ContentsController {
       categoryId?: string;
       cursoId?: string;
       position?: string;
+      embedUrl?: string;
       isPublished?: string;
     },
     @Req() req: { user: AuthUser },
   ) {
-    if (!file) {
-      throw new BadRequestException('Debe adjuntar un archivo');
-    }
     if (!body.title) {
       throw new BadRequestException('El título es obligatorio');
     }
     if (!body.type || !Object.values(ContentType).includes(body.type as ContentType)) {
       throw new BadRequestException('Tipo de contenido inválido');
+    }
+    if (!file && !body.embedUrl) {
+      throw new BadRequestException(
+        'Debe adjuntar un archivo o indicar una URL embebida',
+      );
     }
 
     const content = await this.contentsService.create(
@@ -102,6 +105,7 @@ export class ContentsController {
         categoryId: body.categoryId || null,
         cursoId: body.cursoId || null,
         position: body.position ? Number(body.position) : undefined,
+        embedUrl: body.embedUrl || null,
         isPublished: body.isPublished === 'true',
       },
       file,
@@ -158,6 +162,11 @@ export class ContentsController {
     const content = await this.contentsService.findOne(id, user.role);
     const filePath = this.contentsService.getFilePath(content);
 
+    if (!filePath) {
+      res.status(404).json({ message: 'Este contenido no tiene archivo adjunto' });
+      return;
+    }
+
     let stats;
     try {
       stats = statSync(filePath);
@@ -169,13 +178,13 @@ export class ContentsController {
     const range = req.headers.range;
     const isVideo = content.type === ContentType.Video;
 
-    res.setHeader('Content-Type', content.mimeType);
+    res.setHeader('Content-Type', content.mimeType ?? 'application/octet-stream');
     res.setHeader('Accept-Ranges', 'bytes');
 
     if (!isVideo) {
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename*=UTF-8''${encodeURIComponent(content.originalName)}`,
+        `attachment; filename*=UTF-8''${encodeURIComponent(content.originalName ?? 'archivo')}`,
       );
     }
 

@@ -14,6 +14,10 @@ export class UpdateNewsDto {
   body?: string;
 
   @IsOptional()
+  @IsString()
+  categoryId?: string | null;
+
+  @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
 }
@@ -22,5 +26,14 @@ export interface CreateNewsInput {
   title: string;
   summary?: string;
   body: string;
+  categoryId?: string | null;
   isPublished: boolean;
+}
+
+export interface MediaMeta {
+  type: 'video' | 'audio';
+  path: string;
+  name: string;
+  mime: string;
+  size: number;
 }

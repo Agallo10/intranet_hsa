@@ -12,6 +12,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
 export function Noticias() {
   const { user } = useAuth()
   const canPublish = user?.role === 'admin' || user?.role === 'comunicador'
@@ -104,12 +108,15 @@ export function Noticias() {
                   <div className="min-w-0 flex-1">
                     <div className="mb-1 flex items-center gap-2">
                       <h2 className="line-clamp-1 font-semibold">{n.title}</h2>
+                      {n.category && (
+                        <Badge variant="secondary">{n.category.name}</Badge>
+                      )}
                       {!n.isPublished && (
                         <Badge variant="outline">Borrador</Badge>
                       )}
                     </div>
                     <p className="line-clamp-2 text-sm text-muted-foreground">
-                      {n.summary ?? n.body}
+                      {n.summary ?? stripHtml(n.body)}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {n.author?.fullName ?? '—'} ·{' '}

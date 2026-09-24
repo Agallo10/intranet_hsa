@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil, Newspaper, Trash2 } from 'lucide-react'
+import DOMPurify from 'dompurify'
 import { api } from '../lib/api'
 import { authedUrl } from '../lib/token'
 import { useAuth } from '../features/auth/AuthContext'
@@ -107,8 +108,9 @@ export function NoticiaDetalle() {
           </div>
         )}
         <CardContent className="p-6">
-          <div className="mb-2 flex items-center gap-2">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
             {!n.isPublished && <Badge variant="outline">Borrador</Badge>}
+            {n.category && <Badge variant="secondary">{n.category.name}</Badge>}
             <span className="text-sm text-muted-foreground">
               {n.author?.fullName ?? '—'} ·{' '}
               {new Date(n.publishedAt ?? n.createdAt).toLocaleDateString(
@@ -122,7 +124,33 @@ export function NoticiaDetalle() {
             <p className="mt-2 font-medium text-muted-foreground">{n.summary}</p>
           )}
           <Separator className="my-4" />
-          <div className="whitespace-pre-wrap text-foreground/90">{n.body}</div>
+          <div
+            className="text-foreground/90 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5"
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(n.body) }}
+          />
+
+          {n.media && n.media.length > 0 && (
+            <div className="mt-4 space-y-3">
+              {n.media.map((m) => {
+                const url = authedUrl(`/api/news/${n.id}/media/${m.id}/file`)
+                return m.type === 'video' ? (
+                  <video
+                    key={m.id}
+                    controls
+                    className="max-h-80 w-full rounded-md bg-black"
+                    src={url}
+                  />
+                ) : (
+                  <div key={m.id} className="rounded-md border p-3">
+                    <p className="mb-2 text-sm text-muted-foreground">
+                      {m.originalName}
+                    </p>
+                    <audio controls className="w-full" src={url} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

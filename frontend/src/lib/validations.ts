@@ -42,7 +42,6 @@ export type CategoryValues = z.infer<typeof categorySchema>
 export const noticiaSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio'),
   summary: z.string().optional(),
-  body: z.string().min(1, 'El contenido es obligatorio'),
 })
 
 export type NoticiaValues = z.infer<typeof noticiaSchema>

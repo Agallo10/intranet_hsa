@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { api, getErrorMessage } from '../lib/api'
 import { authedUrl } from '../lib/token'
+import { toEmbedSrc } from '../lib/embed'
 import { useAuth } from '../features/auth/AuthContext'
 import type { ContentDto, CursoDetalleDto } from '../lib/types'
 import { videoSchema, type VideoValues } from '../lib/validations'
@@ -130,12 +131,35 @@ export function CursoDetalle() {
       {playing && (
         <Card className="mb-6 overflow-hidden">
           <CardContent className="p-0">
-            <video
-              controls
-              autoPlay
-              className="max-h-[420px] w-full bg-black"
-              src={authedUrl(`/api/contents/${playing.id}/file`)}
-            />
+            {playing.embedUrl ? (
+              toEmbedSrc(playing.embedUrl) ? (
+                <iframe
+                  className="aspect-video w-full"
+                  src={toEmbedSrc(playing.embedUrl)!}
+                  title={playing.title}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="p-4">
+                  <a
+                    href={playing.embedUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Abrir video externo
+                  </a>
+                </div>
+              )
+            ) : (
+              <video
+                controls
+                autoPlay
+                className="max-h-[420px] w-full bg-black"
+                src={authedUrl(`/api/contents/${playing.id}/file`)}
+              />
+            )}
             <div className="p-4">
               <p className="font-medium">{playing.title}</p>
             </div>
@@ -241,6 +265,8 @@ function AddVideoDialog({
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [mode, setMode] = useState<'upload' | 'url'>('upload')
+  const [embedUrl, setEmbedUrl] = useState('')
 
   const {
     register,
@@ -259,6 +285,8 @@ function AddVideoDialog({
     onSuccess: () => {
       setError(null)
       reset()
+      setEmbedUrl('')
+      setMode('upload')
       if (fileRef.current) fileRef.current.value = ''
       onOpenChange(false)
       onUploaded()
@@ -267,19 +295,34 @@ function AddVideoDialog({
   })
 
   function onSubmit(values: VideoValues) {
-    const file = fileRef.current?.files?.[0]
-    if (!file) {
-      setError('Debe seleccionar un video')
-      return
+    if (mode === 'upload') {
+      const file = fileRef.current?.files?.[0]
+      if (!file) {
+        setError('Debe seleccionar un video')
+        return
+      }
+      const form = new FormData()
+      form.append('file', file)
+      form.append('title', values.title)
+      form.append('type', 'video')
+      form.append('cursoId', cursoId)
+      form.append('position', String(position))
+      form.append('isPublished', 'true')
+      uploadMutation.mutate(form)
+    } else {
+      if (!embedUrl.trim()) {
+        setError('Debe indicar una URL de video')
+        return
+      }
+      const form = new FormData()
+      form.append('embedUrl', embedUrl.trim())
+      form.append('title', values.title)
+      form.append('type', 'video')
+      form.append('cursoId', cursoId)
+      form.append('position', String(position))
+      form.append('isPublished', 'true')
+      uploadMutation.mutate(form)
     }
-    const form = new FormData()
-    form.append('file', file)
-    form.append('title', values.title)
-    form.append('type', 'video')
-    form.append('cursoId', cursoId)
-    form.append('position', String(position))
-    form.append('isPublished', 'true')
-    uploadMutation.mutate(form)
   }
 
   return (
@@ -296,10 +339,46 @@ function AddVideoDialog({
               <p className="text-xs text-destructive">{errors.title.message}</p>
             )}
           </div>
-          <div className="space-y-1.5">
-            <Label>Archivo de video</Label>
-            <Input ref={fileRef} type="file" accept="video/mp4,video/webm" />
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'upload' ? 'default' : 'outline'}
+              onClick={() => setMode('upload')}
+            >
+              Subir archivo
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={mode === 'url' ? 'default' : 'outline'}
+              onClick={() => setMode('url')}
+            >
+              Pegar URL (YouTube/Vimeo)
+            </Button>
           </div>
+
+          {mode === 'upload' ? (
+            <div className="space-y-1.5">
+              <Label>Archivo de video</Label>
+              <Input ref={fileRef} type="file" accept="video/mp4,video/webm" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <Label>URL del video</Label>
+              <Input
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={embedUrl}
+                onChange={(e) => setEmbedUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Se guarda el enlace y se reproduce embebido sin ocupar espacio.
+              </p>
+            </div>
+          )}
+
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>

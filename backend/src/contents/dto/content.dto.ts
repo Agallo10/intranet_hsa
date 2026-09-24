@@ -30,5 +30,6 @@ export interface CreateContentInput {
   categoryId?: string | null;
   cursoId?: string | null;
   position?: number;
+  embedUrl?: string | null;
   isPublished: boolean;
 }

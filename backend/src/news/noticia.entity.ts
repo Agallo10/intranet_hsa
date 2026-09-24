@@ -9,6 +9,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { User } from '../users/user.entity.js';
+import { NewsCategory } from './news-category.entity.js';
 
 @Entity('noticias')
 export class Noticia {
@@ -27,6 +28,14 @@ export class Noticia {
 
   @Column({ type: 'varchar', nullable: true })
   coverImagePath: string | null;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  categoryId: string | null;
+
+  @ManyToOne(() => NewsCategory, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'categoryId' })
+  category: NewsCategory | null;
 
   @Column({ default: false })
   isPublished: boolean;
