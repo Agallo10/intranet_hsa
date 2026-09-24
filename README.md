@@ -14,9 +14,10 @@ formatos de calidad, con control de acceso por roles.
 
 | Rol | Permisos |
 |-----|----------|
-| `admin` | Todo: usuarios, categorías, publicar y gestionar contenido |
-| `editor` | Publicar, editar y eliminar contenido propio |
-| `lector` | Ver la biblioteca, reproducir videos y descargar documentos |
+| `admin` | Todo: usuarios, categorías, publicar y gestionar contenido, auditoría |
+| `editor` | Publicar/editar/eliminar formatos y cursos |
+| `comunicador` | Publicar y eliminar noticias |
+| `lector` | Ver noticias, descargar formatos, ver tutoriales y chatear |
 
 ## Estructura
 
@@ -25,6 +26,10 @@ backend/            API NestJS
 frontend/           SPA React
 specs/              Especificación (Spec Kit)
 docker-compose.yml  Despliegue on-premise
+deploy.sh           Despliegue de producción (Docker)
+install.sh          Instalación en desarrollo (verifica requisitos)
+.env.example        Secretos para producción
+REQUISITOS.md       Requisitos para iniciar el sistema
 scripts/backup.sh   Respaldo de BD + archivos
 ```
 
@@ -61,17 +66,18 @@ cd frontend && npm run lint && npm run build
 ## Despliegue (Linux on-premise)
 
 ```bash
-# Configurar secretos
-export JWT_ACCESS_SECRET=...
-export JWT_REFRESH_SECRET=...
-export SEED_ADMIN_PASSWORD=...
+# Opción rápida: despliegue automatizado (clona/pule, configura secretos y levanta)
+REPO_URL=https://... ./deploy.sh
 
+# O manualmente:
+cp .env.example .env            # completar JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, POSTGRES_PASSWORD
 docker compose up -d --build
 ```
 
 - Frontend + proxy en el puerto `80`.
 - `postgres` (volumen `pgdata`) y `backend` (volumen `uploads`) son persistentes.
 - El backend ejecuta el seed (idempotente) antes de arrancar.
+- `deploy.sh` valida Docker/Compose y genera secretos aleatorios si `.env` no existe.
 
 ### Backups
 

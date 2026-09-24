@@ -4,7 +4,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: intranet
-      POSTGRES_PASSWORD: intranet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatorio}
       POSTGRES_DB: intranet
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -23,7 +23,7 @@ services:
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
       DATABASE_USER: intranet
-      DATABASE_PASSWORD: intranet
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD es obligatorio}
       DATABASE_NAME: intranet
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET es obligatorio}
       JWT_ACCESS_TTL: 15m
@@ -33,7 +33,7 @@ services:
       MAX_FILE_SIZE_MB: 2048
       DB_SYNCHRONIZE: 'true'
       SEED_ADMIN_USERNAME: ${SEED_ADMIN_USERNAME:-admin}
-      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-admin123}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:?SEED_ADMIN_PASSWORD es obligatorio}
       SEED_ADMIN_FULLNAME: Administrador
     volumes:
       - uploads:/data/uploads
