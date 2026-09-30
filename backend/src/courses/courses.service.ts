@@ -44,7 +44,11 @@ export class CoursesService {
       .createQueryBuilder('curso')
       .leftJoinAndSelect('curso.createdBy', 'createdBy');
 
-    if (role === Role.Lector || role === Role.Comunicador) {
+    if (
+      role === Role.Lector ||
+      role === Role.Comunicador ||
+      role === Role.GestorDocumental
+    ) {
       qb.andWhere('curso.isPublished = :published', { published: true });
     }
 

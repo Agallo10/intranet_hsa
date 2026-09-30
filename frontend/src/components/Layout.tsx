@@ -48,9 +48,9 @@ export function Layout() {
             <Newspaper className="size-4" />
             Noticias
           </NavLink>
-          <NavLink to="/formatos" className={navLinkClass}>
+          <NavLink to="/documentos" className={navLinkClass}>
             <FileText className="size-4" />
-            Formatos de documentos
+            Documentos
           </NavLink>
           <NavLink to="/tutoriales" className={navLinkClass}>
             <GraduationCap className="size-4" />

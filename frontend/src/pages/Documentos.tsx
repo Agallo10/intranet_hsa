@@ -37,9 +37,12 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
 }
 
-export function Formatos() {
+export function Documentos() {
   const { user } = useAuth()
-  const canPublish = user?.role === 'admin' || user?.role === 'editor'
+  const canPublish =
+    user?.role === 'admin' ||
+    user?.role === 'editor' ||
+    user?.role === 'gestor_documental'
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
 
@@ -139,9 +142,9 @@ export function Formatos() {
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Formatos de documentos</h1>
+          <h1 className="text-2xl font-semibold">Documentos</h1>
           <p className="text-sm text-muted-foreground">
-            Documentos y formatos de calidad descargables
+            Documentos, protocolos y formatos de calidad descargables
           </p>
         </div>
         {canPublish && (

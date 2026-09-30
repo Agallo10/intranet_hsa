@@ -147,6 +147,7 @@ export function Users() {
               <SelectItem value="lector">Lector</SelectItem>
               <SelectItem value="editor">Editor</SelectItem>
               <SelectItem value="comunicador">Comunicador</SelectItem>
+              <SelectItem value="gestor_documental">Gestor documental</SelectItem>
               <SelectItem value="admin">Administrador</SelectItem>
             </SelectContent>
           </Select>
@@ -282,6 +283,7 @@ export function Users() {
                         <SelectItem value="lector">Lector</SelectItem>
                         <SelectItem value="editor">Editor</SelectItem>
                         <SelectItem value="comunicador">Comunicador</SelectItem>
+                        <SelectItem value="gestor_documental">Gestor documental</SelectItem>
                         <SelectItem value="admin">Administrador</SelectItem>
                       </SelectContent>
                     </Select>

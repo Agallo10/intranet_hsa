@@ -46,7 +46,9 @@ export class CoursesController {
       throw new NotFoundException('Curso no encontrado');
     }
     if (
-      (req.user.role === Role.Lector || req.user.role === Role.Comunicador) &&
+      (req.user.role === Role.Lector ||
+        req.user.role === Role.Comunicador ||
+        req.user.role === Role.GestorDocumental) &&
       !curso.isPublished
     ) {
       throw new NotFoundException('Curso no encontrado');

@@ -122,7 +122,11 @@ export class NewsService {
       .leftJoinAndSelect('noticia.author', 'author')
       .leftJoinAndSelect('noticia.category', 'category');
 
-    if (role === Role.Lector || role === Role.Editor) {
+    if (
+      role === Role.Lector ||
+      role === Role.Editor ||
+      role === Role.GestorDocumental
+    ) {
       qb.andWhere('noticia.isPublished = :published', { published: true });
     }
 
@@ -156,7 +160,9 @@ export class NewsService {
       throw new NotFoundException('Noticia no encontrada');
     }
     if (
-      (role === Role.Lector || role === Role.Editor) &&
+      (role === Role.Lector ||
+        role === Role.Editor ||
+        role === Role.GestorDocumental) &&
       !noticia.isPublished
     ) {
       throw new NotFoundException('Noticia no encontrada');

@@ -7,7 +7,8 @@ formatos de calidad, con control de acceso por roles.
 
 - **Backend**: NestJS + TypeORM + PostgreSQL
 - **Frontend**: React + Vite + TypeScript + Tailwind CSS
-- **Auth**: JWT (access + refresh) con roles `admin`, `editor`, `lector`
+- **Auth**: JWT (access + refresh) con roles `admin`, `editor`, `comunicador`,
+  `gestor_documental`, `lector`
 - **Archivos**: disco local con streaming de video (HTTP Range)
 
 ## Roles
@@ -15,9 +16,10 @@ formatos de calidad, con control de acceso por roles.
 | Rol | Permisos |
 |-----|----------|
 | `admin` | Todo: usuarios, categorías, publicar y gestionar contenido, auditoría |
-| `editor` | Publicar/editar/eliminar formatos y cursos |
+| `editor` | Publicar/editar/eliminar documentos y cursos |
 | `comunicador` | Publicar y eliminar noticias |
-| `lector` | Ver noticias, descargar formatos, ver tutoriales y chatear |
+| `gestor_documental` | Subir documentos (no videos, cursos ni noticias) |
+| `lector` | Ver noticias, descargar documentos, ver tutoriales y chatear |
 
 ## Estructura
 

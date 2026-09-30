@@ -25,7 +25,7 @@ export const userSchema = z.object({
     .min(3, 'El usuario debe tener al menos 3 caracteres'),
   fullName: z.string().min(1, 'El nombre es obligatorio'),
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  role: z.enum(['admin', 'editor', 'comunicador', 'lector'], {
+  role: z.enum(['admin', 'editor', 'comunicador', 'gestor_documental', 'lector'], {
     message: 'Seleccione un rol válido',
   }),
 })

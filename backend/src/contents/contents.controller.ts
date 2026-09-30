@@ -1,9 +1,11 @@
 import { createReadStream, statSync } from 'node:fs';
+import { unlink } from 'node:fs/promises';
 import {
   BadRequestException,
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Param,
   Patch,
@@ -68,7 +70,7 @@ export class ContentsController {
   }
 
   @Post()
-  @Roles(Role.Admin, Role.Editor)
+  @Roles(Role.Admin, Role.Editor, Role.GestorDocumental)
   @UseInterceptors(FileInterceptor('file'))
   async create(
     @UploadedFile() file: Express.Multer.File | undefined,
@@ -90,6 +92,17 @@ export class ContentsController {
     }
     if (!body.type || !Object.values(ContentType).includes(body.type as ContentType)) {
       throw new BadRequestException('Tipo de contenido inválido');
+    }
+    if (
+      req.user.role === Role.GestorDocumental &&
+      body.type === ContentType.Video
+    ) {
+      if (file) {
+        await unlink(file.path).catch(() => undefined);
+      }
+      throw new ForbiddenException(
+        'El gestor documental solo puede subir documentos',
+      );
     }
     if (!file && !body.embedUrl) {
       throw new BadRequestException(
@@ -117,12 +130,12 @@ export class ContentsController {
 
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: { user: AuthUser }) {
-    const content = await this.contentsService.findOne(id, req.user.role);
+    const content = await this.contentsService.findOne(id, req.user);
     return toContentDto(content);
   }
 
   @Patch(':id')
-  @Roles(Role.Admin, Role.Editor)
+  @Roles(Role.Admin, Role.Editor, Role.GestorDocumental)
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateContentDto,
@@ -133,7 +146,7 @@ export class ContentsController {
   }
 
   @Delete(':id')
-  @Roles(Role.Admin, Role.Editor)
+  @Roles(Role.Admin, Role.Editor, Role.GestorDocumental)
   async remove(@Param('id') id: string, @Req() req: { user: AuthUser }) {
     await this.contentsService.remove(id, req.user);
     return { ok: true };
@@ -159,7 +172,7 @@ export class ContentsController {
       return;
     }
 
-    const content = await this.contentsService.findOne(id, user.role);
+    const content = await this.contentsService.findOne(id, user);
     const filePath = this.contentsService.getFilePath(content);
 
     if (!filePath) {

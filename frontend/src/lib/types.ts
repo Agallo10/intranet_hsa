@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'editor' | 'comunicador' | 'lector'
+export type Role = 'admin' | 'editor' | 'comunicador' | 'gestor_documental' | 'lector'
 export type ContentType = 'video' | 'document'
 
 export type UserDto = {

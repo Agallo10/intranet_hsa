@@ -158,6 +158,11 @@ export class ContentsService {
 
     if (user.role === Role.Lector || user.role === Role.Comunicador) {
       qb.andWhere('content.isPublished = :published', { published: true });
+    } else if (user.role === Role.GestorDocumental) {
+      qb.andWhere(
+        '(content.isPublished = :published OR content.uploadedById = :me)',
+        { published: true, me: user.userId },
+      );
     }
 
     if (query.scope === 'mine') {
@@ -194,7 +199,7 @@ export class ContentsService {
     return { items: items.map(toContentDto), total, page, limit };
   }
 
-  async findOne(id: string, role: Role): Promise<Content> {
+  async findOne(id: string, user: AuthUser): Promise<Content> {
     const content = await this.contentsRepository.findOne({
       where: { id },
       relations: { category: true, uploadedBy: true },
@@ -202,9 +207,14 @@ export class ContentsService {
     if (!content) {
       throw new NotFoundException('Contenido no encontrado');
     }
+    const isReader =
+      user.role === Role.Lector ||
+      user.role === Role.Comunicador ||
+      user.role === Role.GestorDocumental;
     if (
-      (role === Role.Lector || role === Role.Comunicador) &&
-      !content.isPublished
+      isReader &&
+      !content.isPublished &&
+      content.uploadedById !== user.userId
     ) {
       throw new NotFoundException('Contenido no encontrado');
     }
@@ -216,7 +226,7 @@ export class ContentsService {
     dto: UpdateContentDto,
     user: AuthUser,
   ): Promise<Content> {
-    const content = await this.findOne(id, user.role);
+    const content = await this.findOne(id, user);
     this.assertCanModify(content, user);
 
     if (dto.title !== undefined) content.title = dto.title;
@@ -238,7 +248,7 @@ export class ContentsService {
   }
 
   async remove(id: string, user: AuthUser): Promise<void> {
-    const content = await this.findOne(id, user.role);
+    const content = await this.findOne(id, user);
     this.assertCanModify(content, user);
 
     const fullPath = this.getFilePath(content);
@@ -292,7 +302,11 @@ export class ContentsService {
       .leftJoinAndSelect('content.uploadedBy', 'uploadedBy')
       .where('content.cursoId = :cursoId', { cursoId });
 
-    if (role === Role.Lector || role === Role.Comunicador) {
+    if (
+      role === Role.Lector ||
+      role === Role.Comunicador ||
+      role === Role.GestorDocumental
+    ) {
       qb.andWhere('content.isPublished = :published', { published: true });
     }
 

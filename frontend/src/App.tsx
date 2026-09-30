@@ -7,7 +7,7 @@ import { Privacidad } from './pages/Privacidad'
 import { Noticias } from './pages/Noticias'
 import { NoticiaDetalle } from './pages/NoticiaDetalle'
 import { NoticiaForm } from './pages/NoticiaForm'
-import { Formatos } from './pages/Formatos'
+import { Documentos } from './pages/Documentos'
 import { Tutoriales } from './pages/Tutoriales'
 import { Chat } from './pages/Chat'
 import { CursoDetalle } from './pages/CursoDetalle'
@@ -33,7 +33,7 @@ export default function App() {
             <Route path="noticias/:id/editar" element={<NoticiaForm />} />
           </Route>
 
-          <Route path="formatos" element={<Formatos />} />
+          <Route path="documentos" element={<Documentos />} />
           <Route path="chat" element={<Chat />} />
 
           <Route path="tutoriales" element={<Tutoriales />} />
