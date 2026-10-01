@@ -26,7 +26,7 @@ export function Privacidad() {
             Aviso de privacidad y política de tratamiento de datos
           </h1>
           <p className="text-sm text-muted-foreground">
-            [Nombre de la ESE] — Ley 1581 de 2012
+            HOSPITAL SAN ANDRES DE TUMACO E.S.E. — Ley 1581 de 2012
           </p>
         </div>
       </div>
@@ -37,9 +37,9 @@ export function Privacidad() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-foreground/90">
           <p>
-            [Nombre de la ESE], identificada con NIT [__________], con domicilio en
-            [__________]. Responsable del tratamiento de los datos personales tratados
-            en esta intranet.
+            HOSPITAL SAN ANDRES DE TUMACO E.S.E., identificada con NIT
+            800179870-2, con domicilio en San Andres de Tumaco. Responsable del
+            tratamiento de los datos personales tratados en esta intranet.
           </p>
         </CardContent>
       </Card>
@@ -73,7 +73,7 @@ export function Privacidad() {
             otorgada, a través del canal de contacto:
           </p>
           <p className="font-medium">
-            [Correo/canal de contacto del responsable de datos]
+            sistemas@hospitalsanandresese.gov.co
           </p>
         </CardContent>
       </Card>
@@ -105,8 +105,8 @@ export function Privacidad() {
 
       <Separator className="my-6" />
       <p className="text-xs text-muted-foreground">
-        Este documento es una plantilla base. La ESE debe completar los campos entre
-        corchetes y validar el texto con su oficina jurídica y el responsable de datos.
+        HOSPITAL SAN ANDRES DE TUMACO E.S.E. — Responsable de datos:
+        sistemas@hospitalsanandresese.gov.co
       </p>
     </div>
   )

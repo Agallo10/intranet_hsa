@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -45,5 +46,14 @@ export class UsersController {
     }
     const user = await this.usersService.update(id, dto);
     return toUserDto(user);
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string, @Req() req: { user: AuthUser }) {
+    if (id === req.user.userId) {
+      throw new ForbiddenException('No puede eliminarse a sí mismo');
+    }
+    await this.usersService.remove(id);
+    return { ok: true };
   }
 }

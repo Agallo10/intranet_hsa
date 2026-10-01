@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { KeyRound, UserPlus } from 'lucide-react'
+import { KeyRound, Pencil, Trash2, UserPlus } from 'lucide-react'
 import { api, getErrorMessage } from '../../lib/api'
 import type { Role, UserDto } from '../../lib/types'
 import { userSchema, type UserValues } from '../../lib/validations'
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -41,6 +42,12 @@ export function Users() {
   const [pwUser, setPwUser] = useState<UserDto | null>(null)
   const [newPassword, setNewPassword] = useState('')
   const [pwError, setPwError] = useState('')
+  const [editing, setEditing] = useState<UserDto | null>(null)
+  const [editUsername, setEditUsername] = useState('')
+  const [editFullName, setEditFullName] = useState('')
+  const [editRole, setEditRole] = useState<Role>('lector')
+  const [editError, setEditError] = useState('')
+  const [showInactive, setShowInactive] = useState(false)
 
   const {
     register,
@@ -103,6 +110,38 @@ export function Users() {
     onError: (err) => setPwError(getErrorMessage(err)),
   })
 
+  const editMutation = useMutation({
+    mutationFn: async (vars: {
+      id: string
+      username: string
+      fullName: string
+      role: Role
+    }) => {
+      await api.patch(`/users/${vars.id}`, {
+        username: vars.username,
+        fullName: vars.fullName,
+        role: vars.role,
+      })
+    },
+    onSuccess: () => {
+      setEditing(null)
+      setEditError('')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err) => setEditError(getErrorMessage(err)),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await api.delete(`/users/${id}`)
+    },
+    onSuccess: () => {
+      setError('')
+      queryClient.invalidateQueries({ queryKey: ['users'] })
+    },
+    onError: (err) => setError(getErrorMessage(err)),
+  })
+
   function submitPasswordChange() {
     if (!pwUser) return
     if (newPassword.length < 6) {
@@ -112,9 +151,41 @@ export function Users() {
     changePasswordMutation.mutate({ id: pwUser.id, password: newPassword })
   }
 
+  function startEdit(user: UserDto) {
+    setEditing(user)
+    setEditUsername(user.username)
+    setEditFullName(user.fullName)
+    setEditRole(user.role)
+    setEditError('')
+  }
+
+  function saveEdit() {
+    if (!editing) return
+    editMutation.mutate({
+      id: editing.id,
+      username: editUsername,
+      fullName: editFullName,
+      role: editRole,
+    })
+  }
+
+  function removeUser(user: UserDto) {
+    if (
+      confirm(
+        `¿Eliminar permanentemente a "${user.fullName}"? Si tiene contenido asociado no se podrá eliminar; use "Desactivar" en su lugar.`,
+      )
+    ) {
+      deleteMutation.mutate(user.id)
+    }
+  }
+
   function onSubmit(values: UserValues) {
     createMutation.mutate(values)
   }
+
+  const visibleUsers = (usersQuery.data ?? []).filter(
+    (u) => showInactive || u.isActive,
+  )
 
   const columns: LegacyColumnDef<UserDto, unknown>[] = [
     {
@@ -186,6 +257,14 @@ export function Users() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => startEdit(user)}
+            >
+              <Pencil className="size-4" />
+              Editar
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => {
                 setPwUser(user)
                 setNewPassword('')
@@ -206,6 +285,14 @@ export function Users() {
               }
             >
               {user.isActive ? 'Desactivar' : 'Activar'}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Eliminar usuario"
+              onClick={() => removeUser(user)}
+            >
+              <Trash2 className="size-4 text-destructive" />
             </Button>
           </div>
         )
@@ -311,9 +398,19 @@ export function Users() {
         </CardContent>
       </Card>
 
+      <div className="flex items-center justify-between">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Checkbox
+            checked={showInactive}
+            onCheckedChange={(v) => setShowInactive(Boolean(v))}
+          />
+          Mostrar usuarios inactivos
+        </label>
+      </div>
+
       <DataTable
         columns={columns}
-        data={usersQuery.data ?? []}
+        data={visibleUsers}
         searchPlaceholder="Buscar usuario..."
         emptyMessage="No hay usuarios"
       />
@@ -351,6 +448,65 @@ export function Users() {
               disabled={changePasswordMutation.isPending}
             >
               Cambiar contraseña
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar usuario</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-username">Usuario</Label>
+              <Input
+                id="edit-username"
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-fullname">Nombre completo</Label>
+              <Input
+                id="edit-fullname"
+                value={editFullName}
+                onChange={(e) => setEditFullName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Rol</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as Role)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="lector">Lector</SelectItem>
+                  <SelectItem value="editor">Editor</SelectItem>
+                  <SelectItem value="comunicador">Comunicador</SelectItem>
+                  <SelectItem value="gestor_documental">
+                    Gestor documental
+                  </SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {editError && (
+              <Alert variant="destructive">
+                <AlertDescription>{editError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={saveEdit} disabled={editMutation.isPending}>
+              Guardar
             </Button>
           </DialogFooter>
         </DialogContent>

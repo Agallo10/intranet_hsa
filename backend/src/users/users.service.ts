@@ -60,6 +60,13 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
+    if (dto.username !== undefined && dto.username !== user.username) {
+      const existing = await this.findByUsername(dto.username);
+      if (existing && existing.id !== id) {
+        throw new ConflictException('El nombre de usuario ya existe');
+      }
+      user.username = dto.username;
+    }
     if (dto.fullName !== undefined) user.fullName = dto.fullName;
     if (dto.role !== undefined) user.role = dto.role;
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
@@ -68,6 +75,26 @@ export class UsersService {
       user.mustChangePassword = true;
     }
     return this.usersRepository.save(user);
+  }
+
+  async remove(id: string): Promise<void> {
+    const user = await this.findById(id);
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    try {
+      await this.usersRepository.remove(user);
+    } catch (err) {
+      const code =
+        (err as { driverError?: { code?: string } }).driverError?.code ??
+        (err as { code?: string }).code;
+      if (code === '23503') {
+        throw new ConflictException(
+          'El usuario tiene contenido asociado y no puede eliminarse. Desactívelo en su lugar.',
+        );
+      }
+      throw err;
+    }
   }
 
   async changePassword(id: string, newPassword: string): Promise<User> {
