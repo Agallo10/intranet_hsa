@@ -3,6 +3,7 @@ import type { UserDto } from './types'
 const ACCESS_KEY = 'intranet_access_token'
 const REFRESH_KEY = 'intranet_refresh_token'
 const USER_KEY = 'intranet_user'
+const FILE_KEY = 'intranet_file_token'
 
 export const tokenStore = {
   getAccessToken(): string | null {
@@ -10,6 +11,9 @@ export const tokenStore = {
   },
   getRefreshToken(): string | null {
     return localStorage.getItem(REFRESH_KEY)
+  },
+  getFileToken(): string | null {
+    return localStorage.getItem(FILE_KEY)
   },
   getUser(): UserDto | null {
     const raw = localStorage.getItem(USER_KEY)
@@ -24,6 +28,9 @@ export const tokenStore = {
     localStorage.setItem(ACCESS_KEY, accessToken)
     localStorage.setItem(REFRESH_KEY, refreshToken)
   },
+  setFileToken(token: string): void {
+    localStorage.setItem(FILE_KEY, token)
+  },
   setUser(user: UserDto): void {
     localStorage.setItem(USER_KEY, JSON.stringify(user))
   },
@@ -31,11 +38,12 @@ export const tokenStore = {
     localStorage.removeItem(ACCESS_KEY)
     localStorage.removeItem(REFRESH_KEY)
     localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(FILE_KEY)
   },
 }
 
 export function authedUrl(path: string): string {
-  const token = tokenStore.getAccessToken()
+  const token = tokenStore.getFileToken() ?? tokenStore.getAccessToken()
   const sep = path.includes('?') ? '&' : '?'
   return `${path}${sep}token=${encodeURIComponent(token ?? '')}`
 }

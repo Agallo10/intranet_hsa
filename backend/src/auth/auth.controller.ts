@@ -88,4 +88,9 @@ export class AuthController {
     );
     return toUserDto(user);
   }
+
+  @Post('file-token')
+  async fileToken(@Req() req: { user: AuthUser }) {
+    return { token: this.authService.signFileToken(req.user) };
+  }
 }

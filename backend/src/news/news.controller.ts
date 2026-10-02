@@ -28,7 +28,7 @@ import { Public } from '../common/decorators/public.decorator.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
 import { Role } from '../common/role.enum.js';
-import { extractToken, verifyAccessToken } from '../common/jwt.helper.js';
+import { extractToken, verifyFileAccess } from '../common/jwt.helper.js';
 
 const buildMedia = (files: Express.Multer.File[]): MediaMeta[] =>
   files.map((f) => ({
@@ -198,7 +198,7 @@ export class NewsController {
       res.status(401).json({ message: 'No autenticado' });
       return;
     }
-    const user = await verifyAccessToken(this.jwtService, this.config, token);
+    const user = await verifyFileAccess(this.jwtService, this.config, token);
     if (!user) {
       res.status(401).json({ message: 'No autenticado' });
       return;
@@ -243,7 +243,7 @@ export class NewsController {
       res.status(401).json({ message: 'No autenticado' });
       return;
     }
-    const user = await verifyAccessToken(this.jwtService, this.config, token);
+    const user = await verifyFileAccess(this.jwtService, this.config, token);
     if (!user) {
       res.status(401).json({ message: 'No autenticado' });
       return;

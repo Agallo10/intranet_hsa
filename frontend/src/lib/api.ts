@@ -47,6 +47,25 @@ function redirectToLogin(): void {
   }
 }
 
+let fileTokenPromise: Promise<string | null> | null = null
+
+export async function warmFileToken(): Promise<string | null> {
+  if (!tokenStore.getAccessToken()) return null
+  if (!fileTokenPromise) {
+    fileTokenPromise = api
+      .post<{ token: string }>('/auth/file-token')
+      .then((res) => {
+        tokenStore.setFileToken(res.data.token)
+        return res.data.token
+      })
+      .catch(() => null)
+      .finally(() => {
+        fileTokenPromise = null
+      })
+  }
+  return fileTokenPromise
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {

@@ -27,6 +27,7 @@ import { Roles } from '../common/decorators/roles.decorator.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
 import { Role } from '../common/role.enum.js';
 import { ContentType } from '../common/content-type.enum.js';
+import { extractToken, verifyFileAccess } from '../common/jwt.helper.js';
 
 @Controller('contents')
 export class ContentsController {
@@ -235,33 +236,10 @@ export class ContentsController {
     queryToken: string | undefined,
     authorization: string | undefined,
   ): Promise<AuthUser | null> {
-    let token = queryToken;
-    if (!token && authorization?.startsWith('Bearer ')) {
-      token = authorization.slice(7);
-    }
+    const token = extractToken(queryToken, authorization);
     if (!token) {
       return null;
     }
-
-    try {
-      const payload = await this.jwtService.verifyAsync<{
-        sub: string;
-        username: string;
-        role: Role;
-        type: string;
-      }>(token, {
-        secret: this.config.get<string>('JWT_ACCESS_SECRET'),
-      });
-      if (payload.type !== 'access') {
-        return null;
-      }
-      return {
-        userId: payload.sub,
-        username: payload.username,
-        role: payload.role,
-      };
-    } catch {
-      return null;
-    }
+    return verifyFileAccess(this.jwtService, this.config, token);
   }
 }

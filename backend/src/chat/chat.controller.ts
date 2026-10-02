@@ -21,7 +21,7 @@ import { ChatService, toMessageDto } from './chat.service.js';
 import { ChatGateway } from './chat.gateway.js';
 import { Public } from '../common/decorators/public.decorator.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
-import { extractToken, verifyAccessToken } from '../common/jwt.helper.js';
+import { extractToken, verifyFileAccess } from '../common/jwt.helper.js';
 
 @Controller('chat')
 export class ChatController {
@@ -136,7 +136,7 @@ export class ChatController {
       res.status(401).json({ message: 'No autenticado' });
       return;
     }
-    const user = await verifyAccessToken(this.jwtService, this.config, token);
+    const user = await verifyFileAccess(this.jwtService, this.config, token);
     if (!user) {
       res.status(401).json({ message: 'No autenticado' });
       return;

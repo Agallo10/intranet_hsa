@@ -2,11 +2,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from 'react'
-import { api } from '../../lib/api'
+import { api, warmFileToken } from '../../lib/api'
 import { tokenStore } from '../../lib/token'
 import type { LoginResponse, UserDto } from '../../lib/types'
 
@@ -32,7 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     tokenStore.setTokens(accessToken, refreshToken)
     tokenStore.setUser(user)
     setUser(user)
+    await warmFileToken()
     return user
+  }, [])
+
+  useEffect(() => {
+    if (tokenStore.getUser()) {
+      void warmFileToken()
+    }
   }, [])
 
   const logout = useCallback(() => {

@@ -3,6 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService, type JwtSignOptions } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../common/role.enum.js';
+import { AuthUser } from '../common/guards/roles.guard.js';
+import { createFileToken } from '../common/jwt.helper.js';
 import { User } from '../users/user.entity.js';
 import { UsersService } from '../users/users.service.js';
 
@@ -34,6 +36,10 @@ export class AuthService {
   async login(user: User): Promise<TokenPair & { user: User }> {
     const tokens = this.signTokens(user);
     return { ...tokens, user };
+  }
+
+  signFileToken(user: AuthUser): string {
+    return createFileToken(this.jwtService, this.config, user);
   }
 
   async refresh(refreshToken: string): Promise<TokenPair> {
