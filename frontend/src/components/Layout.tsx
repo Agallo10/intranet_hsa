@@ -8,10 +8,13 @@ import {
   History,
   MessageSquare,
   LogOut,
+  Sun,
+  Moon,
 } from 'lucide-react'
 import { cn } from 'cn'
 import { useAuth } from '../features/auth/AuthContext'
 import { useSocket } from '../features/chat/SocketContext'
+import { useTheme } from '../features/theme/ThemeProvider'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 
@@ -26,6 +29,7 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function Layout() {
   const { user, logout } = useAuth()
   const { totalUnread } = useSocket()
+  const { theme, toggle } = useTheme()
   const isAdmin = user?.role === 'admin'
 
   return (
@@ -96,6 +100,18 @@ export function Layout() {
                 {user?.role}
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggle}
+              aria-label={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+            >
+              {theme === 'dark' ? (
+                <Sun className="size-4" />
+              ) : (
+                <Moon className="size-4" />
+              )}
+            </Button>
             <Button
               variant="ghost"
               size="icon"

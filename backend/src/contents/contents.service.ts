@@ -234,8 +234,10 @@ export class ContentsService {
     if (dto.categoryId !== undefined) {
       if (dto.categoryId) {
         await this.assertCategoryValid(dto.categoryId);
+        content.categoryId = dto.categoryId;
+      } else {
+        content.categoryId = null;
       }
-      content.categoryId = dto.categoryId;
     }
     if (dto.isPublished !== undefined) content.isPublished = dto.isPublished;
     if (dto.position !== undefined) content.position = dto.position;

@@ -157,6 +157,7 @@ export class ContentsController {
   async getFile(
     @Param('id') id: string,
     @Query('token') queryToken: string | undefined,
+    @Query('preview') preview: string | undefined,
     @Req()
     req: {
       headers: {
@@ -197,7 +198,9 @@ export class ContentsController {
     if (!isVideo) {
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename*=UTF-8''${encodeURIComponent(content.originalName ?? 'archivo')}`,
+        preview === '1'
+          ? `inline; filename*=UTF-8''${encodeURIComponent(content.originalName ?? 'archivo')}`
+          : `attachment; filename*=UTF-8''${encodeURIComponent(content.originalName ?? 'archivo')}`,
       );
     }
 
