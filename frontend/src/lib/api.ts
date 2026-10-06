@@ -42,6 +42,7 @@ async function refreshAccessToken(): Promise<string | null> {
 
 function redirectToLogin(): void {
   tokenStore.clear()
+  tokenStore.markSessionExpired()
   if (window.location.pathname !== '/login') {
     window.location.assign('/login')
   }
@@ -51,6 +52,9 @@ let fileTokenPromise: Promise<string | null> | null = null
 
 export async function warmFileToken(): Promise<string | null> {
   if (!tokenStore.getAccessToken()) return null
+  if (tokenStore.isFileTokenValid()) {
+    return tokenStore.getFileToken()
+  }
   if (!fileTokenPromise) {
     fileTokenPromise = api
       .post<{ token: string }>('/auth/file-token')

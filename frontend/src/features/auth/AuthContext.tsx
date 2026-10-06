@@ -38,9 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    if (tokenStore.getUser()) {
-      void warmFileToken()
-    }
+    if (!tokenStore.getUser()) return
+    void warmFileToken()
+    const id = setInterval(() => {
+      if (!tokenStore.isFileTokenValid()) {
+        void warmFileToken()
+      }
+    }, 60 * 1000)
+    return () => clearInterval(id)
   }, [])
 
   const logout = useCallback(() => {

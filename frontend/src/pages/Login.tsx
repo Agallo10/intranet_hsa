@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle } from 'lucide-react'
 import { useAuth } from '../features/auth/AuthContext'
 import { getErrorMessage } from '../lib/api'
+import { tokenStore } from '../lib/token'
 import { loginSchema, type LoginValues } from '../lib/validations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +23,7 @@ export function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
+  const [sessionExpired] = useState(() => tokenStore.consumeSessionExpired())
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from
     ?.pathname ?? '/'
@@ -91,6 +94,15 @@ export function Login() {
                 </p>
               )}
             </div>
+
+            {sessionExpired && (
+              <Alert>
+                <AlertCircle className="size-4" />
+                <AlertDescription>
+                  Tu sesión expiró. Vuelve a iniciar sesión para continuar.
+                </AlertDescription>
+              </Alert>
+            )}
 
             {errors.root && (
               <Alert variant="destructive">
