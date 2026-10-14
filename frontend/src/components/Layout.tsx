@@ -1,4 +1,5 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import {
   Newspaper,
   FileText,
@@ -10,6 +11,7 @@ import {
   LogOut,
   Sun,
   Moon,
+  ChevronDown,
 } from 'lucide-react'
 import { cn } from 'cn'
 import { useAuth } from '../features/auth/AuthContext'
@@ -30,7 +32,15 @@ export function Layout() {
   const { user, logout } = useAuth()
   const { totalUnread } = useSocket()
   const { theme, toggle } = useTheme()
+  const location = useLocation()
   const isAdmin = user?.role === 'admin'
+  const [categoriesOpen, setCategoriesOpen] = useState(false)
+
+  useEffect(() => {
+    if (location.pathname.startsWith('/admin/categorias')) {
+      setCategoriesOpen(true)
+    }
+  }, [location.pathname])
 
   return (
     <div className="flex min-h-screen">
@@ -80,10 +90,42 @@ export function Layout() {
                 <Users className="size-4" />
                 Usuarios
               </NavLink>
-              <NavLink to="/admin/categorias" className={navLinkClass}>
+
+              <button
+                type="button"
+                onClick={() => setCategoriesOpen((o) => !o)}
+                className={cn(
+                  'flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-foreground/70 transition-colors hover:bg-accent hover:text-accent-foreground',
+                  categoriesOpen && 'text-foreground',
+                )}
+              >
                 <Tags className="size-4" />
-                Categorías
-              </NavLink>
+                <span>Categorías</span>
+                <ChevronDown
+                  className={cn(
+                    'ml-auto size-4 transition-transform',
+                    categoriesOpen && 'rotate-180',
+                  )}
+                />
+              </button>
+
+              {categoriesOpen && (
+                <div className="ml-4 space-y-1">
+                  <NavLink to="/admin/categorias" end className={navLinkClass}>
+                    <FileText className="size-4" />
+                    Documentos
+                  </NavLink>
+                  <NavLink
+                    to="/admin/categorias-noticias"
+                    end
+                    className={navLinkClass}
+                  >
+                    <Newspaper className="size-4" />
+                    Noticias
+                  </NavLink>
+                </div>
+              )}
+
               <NavLink to="/admin/auditoria" className={navLinkClass}>
                 <History className="size-4" />
                 Registro de accesos

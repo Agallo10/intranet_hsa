@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { NewsCategoriesService } from './news-categories.service.js';
 import { Roles } from '../common/decorators/roles.decorator.js';
 import { Role } from '../common/role.enum.js';
@@ -8,8 +16,8 @@ export class NewsCategoriesController {
   constructor(private readonly service: NewsCategoriesService) {}
 
   @Get()
-  async findAll() {
-    return this.service.findAll();
+  async findAll(@Query('includeInactive') includeInactive?: string) {
+    return this.service.findAll(includeInactive === 'true');
   }
 
   @Post()
