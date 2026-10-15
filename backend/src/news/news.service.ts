@@ -62,6 +62,13 @@ export const toNewsDto = (noticia: Noticia) => ({
     : null,
 });
 
+// Versión ligera para el listado: quita las imágenes embebidas (base64)
+// para no inflar la respuesta; el detalle sigue usando toNewsDto.
+export const toNewsListDto = (noticia: Noticia) => ({
+  ...toNewsDto(noticia),
+  body: noticia.body.replace(/<img[^>]*>/gi, ''),
+});
+
 @Injectable()
 export class NewsService {
   private readonly uploadDir: string;
@@ -152,7 +159,7 @@ export class NewsService {
       .take(limit)
       .getManyAndCount();
 
-    return { items: items.map(toNewsDto), total, page, limit };
+    return { items: items.map(toNewsListDto), total, page, limit };
   }
 
   async findOne(id: string, role: Role): Promise<Noticia> {
