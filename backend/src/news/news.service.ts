@@ -22,16 +22,18 @@ const sanitizeBody = (html: string) =>
       'p', 'br', 'strong', 'em', 'u', 's',
       'h1', 'h2', 'h3', 'h4',
       'ul', 'ol', 'li',
-      'a', 'blockquote',
+      'a', 'blockquote', 'img',
     ],
     allowedAttributes: {
       a: ['href', 'target', 'rel'],
+      img: ['src', 'alt', 'title', 'width', 'height'],
       '*': ['style'],
     },
     allowedStyles: {
       '*': { 'text-align': [/^(left|right|center|justify)$/] },
     },
     allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemesByTag: { img: ['data', 'http', 'https'] },
   });
 
 export const toMediaDto = (m: NoticiaMedia) => ({
@@ -106,6 +108,8 @@ export class NewsService {
       );
       await this.mediaRepository.save(rows);
     }
+
+    await this.refreshCover(saved.id);
 
     return this.findOne(saved.id, user.role);
   }
@@ -244,7 +248,9 @@ export class NewsService {
         sizeBytes: m.size,
       }),
     );
-    return this.mediaRepository.save(rows);
+    const saved = await this.mediaRepository.save(rows);
+    await this.refreshCover(noticiaId);
+    return saved;
   }
 
   async removeMedia(mediaId: string, user: AuthUser): Promise<void> {
@@ -259,6 +265,21 @@ export class NewsService {
     await unlink(resolveUploadPath(this.uploadDir, media.filePath)).catch(
       () => undefined,
     );
+    await this.refreshCover(media.noticiaId);
+  }
+
+  /**
+   * La portada (miniatura del listado) es la primera imagen de la noticia.
+   * Si no hay imágenes, queda sin portada.
+   */
+  private async refreshCover(noticiaId: string): Promise<void> {
+    const firstImage = await this.mediaRepository.findOne({
+      where: { noticiaId, type: 'image' },
+      order: { createdAt: 'ASC' },
+    });
+    await this.newsRepository.update(noticiaId, {
+      coverImagePath: firstImage?.filePath ?? null,
+    });
   }
 
   async findMedia(mediaId: string): Promise<NoticiaMedia | null> {

@@ -1,9 +1,10 @@
-import type { ReactNode } from 'react'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { EditorContent, useEditor, type Editor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import TextAlign from '@tiptap/extension-text-align'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import Image from '@tiptap/extension-image'
 import {
   Bold,
   Italic,
@@ -17,10 +18,51 @@ import {
   ListOrdered,
   Heading1,
   Heading2,
+  ImagePlus,
   Undo2,
   Redo2,
 } from 'lucide-react'
 import { cn } from 'cn'
+
+const MAX_IMAGE_WIDTH = 1200
+
+async function fileToResizedDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file)
+    const img = new window.Image()
+    img.onload = () => {
+      const scale = Math.min(1, MAX_IMAGE_WIDTH / img.width)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext('2d')
+      URL.revokeObjectURL(url)
+      if (!ctx) {
+        reject(new Error('No se pudo procesar la imagen'))
+        return
+      }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Imagen no válida'))
+    }
+    img.src = url
+  })
+}
+
+async function insertImageFiles(editor: Editor, files: File[]): Promise<void> {
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue
+    try {
+      const src = await fileToResizedDataUrl(file)
+      editor.chain().focus().setImage({ src, alt: file.name }).run()
+    } catch {
+      /* ignora imágenes inválidas */
+    }
+  }
+}
 
 function ToolbarButton({
   active,
@@ -62,17 +104,58 @@ export function RichTextEditor({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Underline,
       Link.configure({ openOnClick: false }),
+      Image.configure({ inline: false, allowBase64: true }),
     ],
     content: initialValue,
     editorProps: {
       attributes: {
         class:
-          'min-h-[220px] px-4 py-3 focus:outline-none [&_p]:min-h-[1em]',
+          'min-h-[220px] px-4 py-3 focus:outline-none [&_p]:min-h-[1em] [&_img]:my-2 [&_img]:max-w-full [&_img]:rounded-md',
         spellcheck: 'true',
       },
     },
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
   })
+
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  // Sincroniza el contenido cuando llega (p. ej. al editar una noticia).
+  useEffect(() => {
+    if (!editor) return
+    if (initialValue && initialValue !== editor.getHTML()) {
+      editor.commands.setContent(initialValue, { emitUpdate: false })
+    }
+  }, [editor, initialValue])
+
+  useEffect(() => {
+    if (!editor) return
+    const dom = editor.view.dom
+
+    const onDrop = (event: DragEvent) => {
+      const files = Array.from(event.dataTransfer?.files ?? []).filter((f) =>
+        f.type.startsWith('image/'),
+      )
+      if (files.length === 0) return
+      event.preventDefault()
+      void insertImageFiles(editor, files)
+    }
+
+    const onPaste = (event: ClipboardEvent) => {
+      const files = Array.from(event.clipboardData?.files ?? []).filter((f) =>
+        f.type.startsWith('image/'),
+      )
+      if (files.length === 0) return
+      event.preventDefault()
+      void insertImageFiles(editor, files)
+    }
+
+    dom.addEventListener('drop', onDrop)
+    dom.addEventListener('paste', onPaste)
+    return () => {
+      dom.removeEventListener('drop', onDrop)
+      dom.removeEventListener('paste', onPaste)
+    }
+  }, [editor])
 
   if (!editor) return null
 
@@ -172,6 +255,27 @@ export function RichTextEditor({
         >
           <ListOrdered className="size-4" />
         </ToolbarButton>
+
+        <span className="mx-1 h-5 w-px bg-border" />
+
+        <ToolbarButton
+          label="Insertar imagen"
+          onClick={() => imageInputRef.current?.click()}
+        >
+          <ImagePlus className="size-4" />
+        </ToolbarButton>
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? [])
+            if (files.length > 0) void insertImageFiles(editor, files)
+            e.target.value = ''
+          }}
+        />
 
         <span className="mx-1 h-5 w-px bg-border" />
 

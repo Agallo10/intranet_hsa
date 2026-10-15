@@ -14,6 +14,7 @@
     "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.102.8",
     "@tanstack/react-table": "^9.2.4",
+    "@tiptap/extension-image": "^3.31.3",
     "@tiptap/extension-link": "^3.31.3",
     "@tiptap/extension-text-align": "^3.31.3",
     "@tiptap/extension-underline": "^3.31.3",

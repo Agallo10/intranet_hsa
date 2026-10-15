@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Pencil, Newspaper, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { api } from '../lib/api'
 import { authedUrl } from '../lib/token'
@@ -9,6 +9,7 @@ import type { NoticiaDto } from '../lib/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { ImageCarousel } from '@/components/ImageCarousel'
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -60,6 +61,10 @@ export function NoticiaDetalle() {
 
   const n = query.data
   const canEdit = user?.role === 'admin' || n.author?.id === user?.id
+  const media = n.media ?? []
+  const images = media.filter((m) => m.type === 'image')
+  const videos = media.filter((m) => m.type === 'video')
+  const audios = media.filter((m) => m.type === 'audio')
 
   return (
     <div>
@@ -95,18 +100,6 @@ export function NoticiaDetalle() {
       </div>
 
       <Card>
-        {n.hasCover && (
-          <img
-            src={authedUrl(`/api/news/${n.id}/cover`)}
-            alt={n.title}
-            className="max-h-72 w-full object-cover"
-          />
-        )}
-        {!n.hasCover && (
-          <div className="flex h-40 items-center justify-center bg-muted">
-            <Newspaper className="size-12 text-muted-foreground/40" />
-          </div>
-        )}
         <CardContent className="p-6">
           <div className="mb-2 flex flex-wrap items-center gap-2">
             {!n.isPublished && <Badge variant="outline">Borrador</Badge>}
@@ -123,32 +116,47 @@ export function NoticiaDetalle() {
           {n.summary && (
             <p className="mt-2 font-medium text-muted-foreground">{n.summary}</p>
           )}
+
+          {images.length > 0 && (
+            <div className="mt-4">
+              <ImageCarousel
+                images={images.map((m) => ({
+                  id: m.id,
+                  url: authedUrl(`/api/news/${n.id}/media/${m.id}/file`),
+                  alt: m.originalName,
+                }))}
+              />
+            </div>
+          )}
+
           <Separator className="my-4" />
           <div
             className="text-foreground/90 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_p]:mb-2 [&_ul]:mb-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:mb-2 [&_ol]:list-decimal [&_ol]:pl-5"
             dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(n.body) }}
           />
 
-          {n.media && n.media.length > 0 && (
+          {(videos.length > 0 || audios.length > 0) && (
             <div className="mt-4 space-y-3">
-              {n.media.map((m) => {
-                const url = authedUrl(`/api/news/${n.id}/media/${m.id}/file`)
-                return m.type === 'video' ? (
-                  <video
-                    key={m.id}
+              {videos.map((m) => (
+                <video
+                  key={m.id}
+                  controls
+                  className="max-h-80 w-full rounded-md bg-black"
+                  src={authedUrl(`/api/news/${n.id}/media/${m.id}/file`)}
+                />
+              ))}
+              {audios.map((m) => (
+                <div key={m.id} className="rounded-md border p-3">
+                  <p className="mb-2 text-sm text-muted-foreground">
+                    {m.originalName}
+                  </p>
+                  <audio
                     controls
-                    className="max-h-80 w-full rounded-md bg-black"
-                    src={url}
+                    className="w-full"
+                    src={authedUrl(`/api/news/${n.id}/media/${m.id}/file`)}
                   />
-                ) : (
-                  <div key={m.id} className="rounded-md border p-3">
-                    <p className="mb-2 text-sm text-muted-foreground">
-                      {m.originalName}
-                    </p>
-                    <audio controls className="w-full" src={url} />
-                  </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
           )}
         </CardContent>

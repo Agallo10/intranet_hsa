@@ -30,9 +30,16 @@ import { AuthUser } from '../common/guards/roles.guard.js';
 import { Role } from '../common/role.enum.js';
 import { extractToken, verifyFileAccess } from '../common/jwt.helper.js';
 
+const mediaType = (mime: string): 'image' | 'video' | 'audio' =>
+  mime.startsWith('image/')
+    ? 'image'
+    : mime.startsWith('video/')
+      ? 'video'
+      : 'audio';
+
 const buildMedia = (files: Express.Multer.File[]): MediaMeta[] =>
   files.map((f) => ({
-    type: f.mimetype.startsWith('video/') ? 'video' : 'audio',
+    type: mediaType(f.mimetype),
     path: `news-media/${f.filename}`,
     name: f.originalname,
     mime: f.mimetype,

@@ -34,15 +34,17 @@ export function NoticiaForm() {
   const queryClient = useQueryClient()
   const isEdit = Boolean(id)
 
-  const coverRef = useRef<HTMLInputElement>(null)
+  const imagesRef = useRef<HTMLInputElement>(null)
   const mediaRef = useRef<HTMLInputElement>(null)
 
   const [isPublished, setIsPublished] = useState(false)
   const [categoryId, setCategoryId] = useState('')
   const [bodyHtml, setBodyHtml] = useState('')
   const [editorReady, setEditorReady] = useState(!isEdit)
+  const [newImages, setNewImages] = useState<File[]>([])
   const [newMedia, setNewMedia] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const {
     register,
@@ -92,20 +94,6 @@ export function NoticiaForm() {
     onError: (err) => setError(getErrorMessage(err)),
   })
 
-  const updateMutation = useMutation({
-    mutationFn: async (data: {
-      title: string
-      summary?: string
-      body: string
-      categoryId: string
-      isPublished: boolean
-    }) => {
-      await api.patch(`/news/${id}`, data)
-    },
-    onSuccess: () => navigate(`/noticias/${id}`),
-    onError: (err) => setError(getErrorMessage(err)),
-  })
-
   const deleteMediaMutation = useMutation({
     mutationFn: async (mediaId: string) => {
       await api.delete(`/news/${id}/media/${mediaId}`)
@@ -114,21 +102,7 @@ export function NoticiaForm() {
     onError: (err) => setError(getErrorMessage(err)),
   })
 
-  async function uploadNewMedia() {
-    if (!id || newMedia.length === 0) return
-    const form = new FormData()
-    newMedia.forEach((f) => form.append('media', f))
-    try {
-      await api.post(`/news/${id}/media`, form)
-      setNewMedia([])
-      if (mediaRef.current) mediaRef.current.value = ''
-      queryClient.invalidateQueries({ queryKey: ['news', id] })
-    } catch (err) {
-      setError(getErrorMessage(err))
-    }
-  }
-
-  function onSubmit(values: NoticiaValues) {
+  async function onSubmit(values: NoticiaValues) {
     setError(null)
     if (isEmptyHtml(bodyHtml)) {
       setError('El contenido es obligatorio')
@@ -136,13 +110,26 @@ export function NoticiaForm() {
     }
 
     if (isEdit) {
-      updateMutation.mutate({
-        title: values.title,
-        summary: values.summary,
-        body: bodyHtml,
-        categoryId,
-        isPublished,
-      })
+      setSaving(true)
+      try {
+        await api.patch(`/news/${id}`, {
+          title: values.title,
+          summary: values.summary,
+          body: bodyHtml,
+          categoryId,
+          isPublished,
+        })
+        if (newImages.length > 0 || newMedia.length > 0) {
+          const form = new FormData()
+          newImages.forEach((f) => form.append('media', f))
+          newMedia.forEach((f) => form.append('media', f))
+          await api.post(`/news/${id}/media`, form)
+        }
+        navigate(`/noticias/${id}`)
+      } catch (err) {
+        setError(getErrorMessage(err))
+        setSaving(false)
+      }
       return
     }
 
@@ -152,8 +139,7 @@ export function NoticiaForm() {
     form.append('body', bodyHtml)
     form.append('categoryId', categoryId)
     form.append('isPublished', String(isPublished))
-    const cover = coverRef.current?.files?.[0]
-    if (cover) form.append('cover', cover)
+    newImages.forEach((f) => form.append('media', f))
     newMedia.forEach((f) => form.append('media', f))
     createMutation.mutate(form)
   }
@@ -219,16 +205,19 @@ export function NoticiaForm() {
               />
             </div>
 
-            {!isEdit && (
-              <div className="space-y-1.5">
-                <Label>Imagen de portada (opcional)</Label>
-                <Input
-                  ref={coverRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                />
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label>Imágenes</Label>
+              <Input
+                ref={imagesRef}
+                type="file"
+                multiple
+                accept="image/*"
+                onChange={(e) => setNewImages(Array.from(e.target.files ?? []))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Puedes adjuntar varias imágenes; se mostrarán en un carrusel.
+              </p>
+            </div>
 
             <div className="space-y-1.5">
               <Label>Videos y audios adjuntos</Label>
@@ -244,16 +233,6 @@ export function NoticiaForm() {
                   {newMedia.length} archivo(s) por subir
                 </p>
               )}
-              {isEdit && newMedia.length > 0 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={uploadNewMedia}
-                >
-                  Subir adjuntos
-                </Button>
-              )}
             </div>
 
             {isEdit && existing.data?.media && existing.data.media.length > 0 && (
@@ -265,7 +244,16 @@ export function NoticiaForm() {
                       key={m.id}
                       className="flex items-center justify-between rounded border px-3 py-1.5 text-sm"
                     >
-                      <span className="truncate">{m.originalName}</span>
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                          {m.type === 'image'
+                            ? 'Imagen'
+                            : m.type === 'video'
+                              ? 'Video'
+                              : 'Audio'}
+                        </span>
+                        <span className="truncate">{m.originalName}</span>
+                      </span>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -296,7 +284,7 @@ export function NoticiaForm() {
 
             <Button
               type="submit"
-              disabled={createMutation.isPending || updateMutation.isPending}
+              disabled={createMutation.isPending || saving}
             >
               <Save className="size-4" />
               {isEdit ? 'Guardar cambios' : 'Publicar noticia'}

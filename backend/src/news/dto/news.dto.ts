@@ -31,7 +31,7 @@ export interface CreateNewsInput {
 }
 
 export interface MediaMeta {
-  type: 'video' | 'audio';
+  type: 'image' | 'video' | 'audio';
   path: string;
   name: string;
   mime: string;

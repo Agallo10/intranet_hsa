@@ -47,7 +47,7 @@ export type NewsCategoryDto = {
 
 export type NoticiaMediaDto = {
   id: string
-  type: 'video' | 'audio'
+  type: 'image' | 'video' | 'audio'
   originalName: string
   mimeType: string
   sizeBytes: number

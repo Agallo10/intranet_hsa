@@ -47,12 +47,13 @@ const ALLOWED_IMAGES = new Set(['image/jpeg', 'image/png', 'image/webp']);
               if (ALLOWED_IMAGES.has(file.mimetype)) cb(null, true);
               else cb(new Error('Solo imágenes JPG, PNG o WEBP para la portada'), false);
             } else if (
+              file.mimetype.startsWith('image/') ||
               file.mimetype.startsWith('video/') ||
               file.mimetype.startsWith('audio/')
             ) {
               cb(null, true);
             } else {
-              cb(new Error('Solo se permiten videos o audios'), false);
+              cb(new Error('Solo se permiten imágenes, videos o audios'), false);
             }
           },
         };
