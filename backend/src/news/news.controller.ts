@@ -87,6 +87,7 @@ export class NewsController {
       summary?: string;
       body?: string;
       categoryId?: string;
+      embedUrl?: string;
       isPublished?: string;
     },
     @Req() req: { user: AuthUser },
@@ -107,6 +108,7 @@ export class NewsController {
           summary: body.summary,
           body: body.body,
           categoryId: body.categoryId || null,
+          embedUrl: body.embedUrl || null,
           isPublished: body.isPublished === 'true',
         },
         req.user,

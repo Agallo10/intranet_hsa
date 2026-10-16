@@ -51,6 +51,7 @@ export const toNewsDto = (noticia: Noticia) => ({
   body: noticia.body,
   isPublished: noticia.isPublished,
   hasCover: noticia.coverImagePath !== null,
+  embedUrl: noticia.embedUrl,
   publishedAt: noticia.publishedAt,
   createdAt: noticia.createdAt,
   updatedAt: noticia.updatedAt,
@@ -95,6 +96,7 @@ export class NewsService {
       summary: input.summary ?? null,
       body: sanitizeBody(input.body),
       categoryId: input.categoryId ?? null,
+      embedUrl: input.embedUrl ?? null,
       isPublished: input.isPublished,
       publishedAt: input.isPublished ? new Date() : null,
       coverImagePath: coverFile ? `news/${coverFile.filename}` : null,
@@ -189,6 +191,7 @@ export class NewsService {
     if (dto.summary !== undefined) noticia.summary = dto.summary;
     if (dto.body !== undefined) noticia.body = sanitizeBody(dto.body);
     if (dto.categoryId !== undefined) noticia.categoryId = dto.categoryId;
+    if (dto.embedUrl !== undefined) noticia.embedUrl = dto.embedUrl;
     if (dto.isPublished !== undefined) {
       noticia.isPublished = dto.isPublished;
       noticia.publishedAt = dto.isPublished

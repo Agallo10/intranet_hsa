@@ -39,6 +39,7 @@ export function NoticiaForm() {
 
   const [isPublished, setIsPublished] = useState(false)
   const [categoryId, setCategoryId] = useState('')
+  const [embedUrl, setEmbedUrl] = useState('')
   const [bodyHtml, setBodyHtml] = useState('')
   const [editorReady, setEditorReady] = useState(!isEdit)
   const [newImages, setNewImages] = useState<File[]>([])
@@ -81,6 +82,7 @@ export function NoticiaForm() {
       })
       setIsPublished(existing.data.isPublished)
       setCategoryId(existing.data.category?.id ?? '')
+      setEmbedUrl(existing.data.embedUrl ?? '')
       setBodyHtml(existing.data.body)
       setEditorReady(true)
     }
@@ -117,6 +119,7 @@ export function NoticiaForm() {
           summary: values.summary,
           body: bodyHtml,
           categoryId,
+          embedUrl,
           isPublished,
         })
         if (newImages.length > 0 || newMedia.length > 0) {
@@ -138,6 +141,7 @@ export function NoticiaForm() {
     form.append('summary', values.summary ?? '')
     form.append('body', bodyHtml)
     form.append('categoryId', categoryId)
+    form.append('embedUrl', embedUrl)
     form.append('isPublished', String(isPublished))
     newImages.forEach((f) => form.append('media', f))
     newMedia.forEach((f) => form.append('media', f))
@@ -176,7 +180,7 @@ export function NoticiaForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="summary">Resumen</Label>
+              <Label htmlFor="summary">Resumen (opcional)</Label>
               <Textarea id="summary" rows={2} {...register('summary')} />
             </div>
 
@@ -203,6 +207,20 @@ export function NoticiaForm() {
                 initialValue={bodyHtml}
                 onChange={setBodyHtml}
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="embed-url">Video de YouTube (opcional)</Label>
+              <Input
+                id="embed-url"
+                type="url"
+                placeholder="https://www.youtube.com/watch?v=..."
+                value={embedUrl}
+                onChange={(e) => setEmbedUrl(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Pega el enlace (YouTube/Vimeo) para mostrarlo embebido en la noticia.
+              </p>
             </div>
 
             <div className="space-y-1.5">

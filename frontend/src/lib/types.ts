@@ -60,6 +60,7 @@ export type NoticiaDto = {
   body: string
   isPublished: boolean
   hasCover: boolean
+  embedUrl: string | null
   publishedAt: string | null
   createdAt: string
   updatedAt: string

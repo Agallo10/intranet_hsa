@@ -18,6 +18,10 @@ export class UpdateNewsDto {
   categoryId?: string | null;
 
   @IsOptional()
+  @IsString()
+  embedUrl?: string | null;
+
+  @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
 }
@@ -27,6 +31,7 @@ export interface CreateNewsInput {
   summary?: string;
   body: string;
   categoryId?: string | null;
+  embedUrl?: string | null;
   isPublished: boolean;
 }
 

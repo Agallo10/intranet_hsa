@@ -29,6 +29,9 @@ export class Noticia {
   @Column({ type: 'varchar', nullable: true })
   coverImagePath: string | null;
 
+  @Column({ type: 'varchar', nullable: true })
+  embedUrl: string | null;
+
   @Index()
   @Column({ type: 'uuid', nullable: true })
   categoryId: string | null;

@@ -293,7 +293,7 @@ function EditDocumentDialog({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="edit-desc">Descripción</Label>
+            <Label htmlFor="edit-desc">Descripción (opcional)</Label>
             <Textarea id="edit-desc" rows={2} {...register('description')} />
           </div>
           <div className="space-y-1.5">
@@ -462,7 +462,7 @@ function DocumentUploadDialog({
             )}
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="doc-desc">Descripción</Label>
+            <Label htmlFor="doc-desc">Descripción (opcional)</Label>
             <Textarea id="doc-desc" rows={2} {...register('description')} />
           </div>
           <div className="space-y-1.5">
@@ -491,7 +491,7 @@ function DocumentUploadDialog({
             <Input
               ref={fileRef}
               type="file"
-              accept=".pdf,.doc,.docx,.xls,.xlsx"
+              accept=".pdf,application/pdf"
             />
           </div>
 

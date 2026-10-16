@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil, Trash2 } from 'lucide-react'
 import DOMPurify from 'dompurify'
 import { api } from '../lib/api'
 import { authedUrl } from '../lib/token'
+import { toEmbedSrc } from '../lib/embed'
 import { useAuth } from '../features/auth/AuthContext'
 import type { NoticiaDto } from '../lib/types'
 import { Button } from '@/components/ui/button'
@@ -115,6 +116,18 @@ export function NoticiaDetalle() {
           <h1 className="text-2xl font-semibold">{n.title}</h1>
           {n.summary && (
             <p className="mt-2 font-medium text-muted-foreground">{n.summary}</p>
+          )}
+
+          {n.embedUrl && toEmbedSrc(n.embedUrl) && (
+            <div className="mt-4">
+              <iframe
+                className="aspect-video w-full rounded-md"
+                src={toEmbedSrc(n.embedUrl)!}
+                title={n.title}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
           )}
 
           {images.length > 0 && (
