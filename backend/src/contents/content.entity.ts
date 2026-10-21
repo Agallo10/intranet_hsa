@@ -14,6 +14,20 @@ import { Area } from '../areas/area.entity.js';
 import { Curso } from '../courses/curso.entity.js';
 import { User } from '../users/user.entity.js';
 
+// pg devuelve las columnas `date` como Date (medianoche local); lo
+// normalizamos a string YYYY-MM-DD para que el API/JSON siga siendo estable.
+const dateOnlyTransformer = {
+  to: (value: string | null) => value,
+  from: (value: string | Date | null): string | null => {
+    if (!value) return null;
+    if (typeof value === 'string') return value.slice(0, 10);
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  },
+};
+
 @Entity('contents')
 export class Content {
   @PrimaryGeneratedColumn('uuid')
@@ -32,10 +46,10 @@ export class Content {
   @Column({ type: 'varchar', nullable: true })
   version: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'date', nullable: true, transformer: dateOnlyTransformer })
   elaborationDate: string | null;
 
-  @Column({ type: 'varchar', nullable: true })
+  @Column({ type: 'date', nullable: true, transformer: dateOnlyTransformer })
   updateDate: string | null;
 
   @Column({ type: 'enum', enum: ContentType })

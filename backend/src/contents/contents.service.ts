@@ -140,8 +140,8 @@ export class ContentsService {
         description: input.description ?? null,
         code: input.code ?? null,
         version: input.version ?? null,
-        elaborationDate: input.elaborationDate ?? null,
-        updateDate: input.updateDate ?? null,
+        elaborationDate: this.normalizeDate(input.elaborationDate),
+        updateDate: this.normalizeDate(input.updateDate),
         type: input.type,
         filePath: file ? file.filename : null,
         embedUrl: input.embedUrl ?? null,
@@ -257,8 +257,9 @@ export class ContentsService {
     if (dto.code !== undefined) content.code = dto.code;
     if (dto.version !== undefined) content.version = dto.version;
     if (dto.elaborationDate !== undefined)
-      content.elaborationDate = dto.elaborationDate;
-    if (dto.updateDate !== undefined) content.updateDate = dto.updateDate;
+      content.elaborationDate = this.normalizeDate(dto.elaborationDate);
+    if (dto.updateDate !== undefined)
+      content.updateDate = this.normalizeDate(dto.updateDate);
     if (dto.categoryId !== undefined) {
       if (dto.categoryId) {
         await this.assertCategoryValid(dto.categoryId);
@@ -317,6 +318,14 @@ export class ContentsService {
         'Solo el autor o un administrador puede modificar este contenido',
       );
     }
+  }
+
+  private normalizeDate(value: string | null | undefined): string | null {
+    if (!value) return null;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      throw new BadRequestException('Fecha inválida (formato YYYY-MM-DD)');
+    }
+    return value;
   }
 
   private async assertCategoryValid(categoryId: string): Promise<void> {
