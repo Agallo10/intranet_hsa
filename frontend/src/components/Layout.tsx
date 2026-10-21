@@ -8,10 +8,11 @@ import {
   Tags,
   History,
   MessageSquare,
+  Building2,
+  ChevronDown,
   LogOut,
   Sun,
   Moon,
-  ChevronDown,
 } from 'lucide-react'
 import { cn } from 'cn'
 import { useAuth } from '../features/auth/AuthContext'
@@ -37,7 +38,10 @@ export function Layout() {
   const [categoriesOpen, setCategoriesOpen] = useState(false)
 
   useEffect(() => {
-    if (location.pathname.startsWith('/admin/categorias')) {
+    if (
+      location.pathname.startsWith('/admin/categorias') ||
+      location.pathname.startsWith('/admin/areas')
+    ) {
       setCategoriesOpen(true)
     }
   }, [location.pathname])
@@ -122,6 +126,10 @@ export function Layout() {
                   >
                     <Newspaper className="size-4" />
                     Noticias
+                  </NavLink>
+                  <NavLink to="/admin/areas" end className={navLinkClass}>
+                    <Building2 className="size-4" />
+                    Áreas
                   </NavLink>
                 </div>
               )}

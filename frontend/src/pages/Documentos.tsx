@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, Eye, FileText, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { api, getErrorMessage } from '../lib/api'
 import { authedUrl } from '../lib/token'
-import type { CategoryDto, ContentDto, ListResponse } from '../lib/types'
+import type { AreaDto, CategoryDto, ContentDto, ListResponse } from '../lib/types'
 import { documentSchema, type DocumentValues } from '../lib/validations'
 import { useAuth } from '../features/auth/AuthContext'
 import { DataTable } from '../components/data-table/data-table'
@@ -102,9 +102,24 @@ export function Documentos() {
       ),
     },
     {
+      accessorKey: 'code',
+      header: 'Código',
+      cell: ({ row }) => row.original.code ?? '—',
+    },
+    {
+      accessorKey: 'version',
+      header: 'Versión',
+      cell: ({ row }) => row.original.version ?? '—',
+    },
+    {
       accessorFn: (row) => row.category?.name ?? '',
       header: 'Categoría',
       cell: ({ row }) => row.original.category?.name ?? '—',
+    },
+    {
+      accessorFn: (row) => row.area?.name ?? '',
+      header: 'Área',
+      cell: ({ row }) => row.original.area?.name ?? '—',
     },
     {
       accessorKey: 'sizeBytes',
@@ -252,6 +267,14 @@ function EditDocumentDialog({
     },
   })
 
+  const areasQuery = useQuery({
+    queryKey: ['areas'],
+    queryFn: async () => {
+      const res = await api.get<AreaDto[]>('/areas')
+      return res.data
+    },
+  })
+
   const editMutation = useMutation({
     mutationFn: async (data: DocumentValues) => {
       await api.patch(`/contents/${content!.id}`, data)
@@ -269,7 +292,12 @@ function EditDocumentDialog({
       reset({
         title: content.title,
         description: content.description ?? '',
+        code: content.code ?? '',
+        version: content.version ?? '',
+        elaborationDate: content.elaborationDate ?? '',
+        updateDate: content.updateDate ?? '',
         categoryId: content.category?.id ?? '',
+        areaId: content.area?.id ?? '',
       })
     }
   }, [content, reset])
@@ -296,6 +324,24 @@ function EditDocumentDialog({
             <Label htmlFor="edit-desc">Descripción (opcional)</Label>
             <Textarea id="edit-desc" rows={2} {...register('description')} />
           </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-code">Código</Label>
+              <Input id="edit-code" {...register('code')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-version">Versión</Label>
+              <Input id="edit-version" {...register('version')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-elab">Fecha de elaboración</Label>
+              <Input id="edit-elab" type="date" {...register('elaborationDate')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-upd">Fecha de actualización</Label>
+              <Input id="edit-upd" type="date" {...register('updateDate')} />
+            </div>
+          </div>
           <div className="space-y-1.5">
             <Label>Categoría</Label>
             <Controller
@@ -304,12 +350,33 @@ function EditDocumentDialog({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Sin área" />
+                    <SelectValue placeholder="Sin categoría" />
                   </SelectTrigger>
                   <SelectContent>
                     {categoriesQuery.data?.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Área</Label>
+            <Controller
+              control={control}
+              name="areaId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sin área" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areasQuery.data?.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -406,13 +473,21 @@ function DocumentUploadDialog({
     formState: { errors },
   } = useForm<DocumentValues>({
     resolver: zodResolver(documentSchema),
-    defaultValues: { title: '', description: '', categoryId: '' },
+    defaultValues: { title: '', description: '', categoryId: '', areaId: '' },
   })
 
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await api.get<CategoryDto[]>('/categories')
+      return res.data
+    },
+  })
+
+  const areasQuery = useQuery({
+    queryKey: ['areas'],
+    queryFn: async () => {
+      const res = await api.get<AreaDto[]>('/areas')
       return res.data
     },
   })
@@ -441,8 +516,13 @@ function DocumentUploadDialog({
     form.append('file', file)
     form.append('title', values.title)
     form.append('description', values.description ?? '')
+    form.append('code', values.code ?? '')
+    form.append('version', values.version ?? '')
+    form.append('elaborationDate', values.elaborationDate ?? '')
+    form.append('updateDate', values.updateDate ?? '')
     form.append('type', 'document')
     if (values.categoryId) form.append('categoryId', values.categoryId)
+    if (values.areaId) form.append('areaId', values.areaId)
     form.append('isPublished', 'true')
     uploadMutation.mutate(form)
   }
@@ -465,6 +545,24 @@ function DocumentUploadDialog({
             <Label htmlFor="doc-desc">Descripción (opcional)</Label>
             <Textarea id="doc-desc" rows={2} {...register('description')} />
           </div>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="doc-code">Código</Label>
+              <Input id="doc-code" {...register('code')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="doc-version">Versión</Label>
+              <Input id="doc-version" {...register('version')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="doc-elab">Fecha de elaboración</Label>
+              <Input id="doc-elab" type="date" {...register('elaborationDate')} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="doc-upd">Fecha de actualización</Label>
+              <Input id="doc-upd" type="date" {...register('updateDate')} />
+            </div>
+          </div>
           <div className="space-y-1.5">
             <Label>Categoría (opcional)</Label>
             <Controller
@@ -479,6 +577,27 @@ function DocumentUploadDialog({
                     {categoriesQuery.data?.map((cat) => (
                       <SelectItem key={cat.id} value={cat.id}>
                         {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Área (opcional)</Label>
+            <Controller
+              control={control}
+              name="areaId"
+              render={({ field }) => (
+                <Select value={field.value} onValueChange={field.onChange}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Sin área" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {areasQuery.data?.map((area) => (
+                      <SelectItem key={area.id} value={area.id}>
+                        {area.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

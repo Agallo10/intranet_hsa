@@ -3,6 +3,7 @@ import { AppModule } from './app.module.js';
 import { UsersService } from './users/users.service.js';
 import { CategoriesService } from './categories/categories.service.js';
 import { NewsCategoriesService } from './news/news-categories.service.js';
+import { AreasService } from './areas/areas.service.js';
 import { Role } from './common/role.enum.js';
 
 const DEFAULT_CATEGORIES = [
@@ -13,6 +14,15 @@ const DEFAULT_CATEGORIES = [
 
 const DEFAULT_NEWS_CATEGORIES = ['Resoluciones', 'Circulares', 'Políticas'];
 
+const DEFAULT_AREAS = [
+  'Calidad',
+  'Urgencias',
+  'Enfermería',
+  'Laboratorio',
+  'Farmacia',
+  'Administración',
+];
+
 async function run() {
   const app = await NestFactory.createApplicationContext(AppModule, {
     logger: ['error', 'warn'],
@@ -21,6 +31,7 @@ async function run() {
   const usersService = app.get(UsersService);
   const categoriesService = app.get(CategoriesService);
   const newsCategoriesService = app.get(NewsCategoriesService);
+  const areasService = app.get(AreasService);
 
   const adminUsername = process.env.SEED_ADMIN_USERNAME ?? 'admin';
   const existing = await usersService.findByUsername(adminUsername);
@@ -56,6 +67,16 @@ async function run() {
     console.log('Categorías de noticias por defecto creadas.');
   } else {
     console.log('Categorías de noticias ya existentes, se omitió el seed.');
+  }
+
+  const areas = await areasService.findAll(true);
+  if (areas.length === 0) {
+    for (const name of DEFAULT_AREAS) {
+      await areasService.create(name);
+    }
+    console.log('Áreas por defecto creadas.');
+  } else {
+    console.log('Áreas ya existentes, se omitió el seed.');
   }
 
   await app.close();

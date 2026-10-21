@@ -19,6 +19,7 @@ import { Role } from '../common/role.enum.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
 import { CategoriesService } from '../categories/categories.service.js';
 import { Curso } from '../courses/curso.entity.js';
+import { Area } from '../areas/area.entity.js';
 import { ContentType } from '../common/content-type.enum.js';
 import { AuditService } from '../audit/audit.service.js';
 
@@ -37,6 +38,10 @@ export const toContentDto = (content: Content) => ({
   id: content.id,
   title: content.title,
   description: content.description,
+  code: content.code,
+  version: content.version,
+  elaborationDate: content.elaborationDate,
+  updateDate: content.updateDate,
   type: content.type,
   originalName: content.originalName,
   mimeType: content.mimeType,
@@ -52,6 +57,13 @@ export const toContentDto = (content: Content) => ({
         id: content.category.id,
         name: content.category.name,
         slug: content.category.slug,
+      }
+    : null,
+  area: content.area
+    ? {
+        id: content.area.id,
+        name: content.area.name,
+        slug: content.area.slug,
       }
     : null,
   uploadedBy: content.uploadedBy
@@ -71,6 +83,8 @@ export class ContentsService {
     private readonly categoriesService: CategoriesService,
     @InjectRepository(Curso)
     private readonly cursosRepository: Repository<Curso>,
+    @InjectRepository(Area)
+    private readonly areasRepository: Repository<Area>,
     private readonly auditService: AuditService,
   ) {
     this.config = config;
@@ -109,6 +123,9 @@ export class ContentsService {
       if (input.categoryId) {
         await this.assertCategoryValid(input.categoryId);
       }
+      if (input.areaId) {
+        await this.assertAreaValid(input.areaId);
+      }
       if (input.type === ContentType.Video) {
         if (!input.cursoId) {
           throw new BadRequestException(
@@ -121,6 +138,10 @@ export class ContentsService {
       const content = this.contentsRepository.create({
         title: input.title,
         description: input.description ?? null,
+        code: input.code ?? null,
+        version: input.version ?? null,
+        elaborationDate: input.elaborationDate ?? null,
+        updateDate: input.updateDate ?? null,
         type: input.type,
         filePath: file ? file.filename : null,
         embedUrl: input.embedUrl ?? null,
@@ -129,6 +150,7 @@ export class ContentsService {
         sizeBytes: file ? file.size : null,
         isPublished: input.isPublished,
         categoryId: input.categoryId ?? null,
+        areaId: input.areaId ?? null,
         cursoId: input.cursoId ?? null,
         position: input.position ?? 0,
         uploadedById: user.userId,
@@ -137,7 +159,7 @@ export class ContentsService {
       const saved = await this.contentsRepository.save(content);
       return this.contentsRepository.findOneOrFail({
         where: { id: saved.id },
-        relations: { category: true, uploadedBy: true },
+        relations: { category: true, area: true, uploadedBy: true },
       });
     } catch (err) {
       if (file) {
@@ -154,6 +176,7 @@ export class ContentsService {
     const qb = this.contentsRepository
       .createQueryBuilder('content')
       .leftJoinAndSelect('content.category', 'category')
+      .leftJoinAndSelect('content.area', 'area')
       .leftJoinAndSelect('content.uploadedBy', 'uploadedBy');
 
     if (user.role === Role.Lector || user.role === Role.Comunicador) {
@@ -202,7 +225,7 @@ export class ContentsService {
   async findOne(id: string, user: AuthUser): Promise<Content> {
     const content = await this.contentsRepository.findOne({
       where: { id },
-      relations: { category: true, uploadedBy: true },
+      relations: { category: true, area: true, uploadedBy: true },
     });
     if (!content) {
       throw new NotFoundException('Contenido no encontrado');
@@ -231,6 +254,11 @@ export class ContentsService {
 
     if (dto.title !== undefined) content.title = dto.title;
     if (dto.description !== undefined) content.description = dto.description;
+    if (dto.code !== undefined) content.code = dto.code;
+    if (dto.version !== undefined) content.version = dto.version;
+    if (dto.elaborationDate !== undefined)
+      content.elaborationDate = dto.elaborationDate;
+    if (dto.updateDate !== undefined) content.updateDate = dto.updateDate;
     if (dto.categoryId !== undefined) {
       if (dto.categoryId) {
         await this.assertCategoryValid(dto.categoryId);
@@ -239,13 +267,21 @@ export class ContentsService {
         content.categoryId = null;
       }
     }
+    if (dto.areaId !== undefined) {
+      if (dto.areaId) {
+        await this.assertAreaValid(dto.areaId);
+        content.areaId = dto.areaId;
+      } else {
+        content.areaId = null;
+      }
+    }
     if (dto.isPublished !== undefined) content.isPublished = dto.isPublished;
     if (dto.position !== undefined) content.position = dto.position;
 
     const saved = await this.contentsRepository.save(content);
     return this.contentsRepository.findOneOrFail({
       where: { id: saved.id },
-      relations: { category: true, uploadedBy: true },
+      relations: { category: true, area: true, uploadedBy: true },
     });
   }
 
@@ -290,6 +326,15 @@ export class ContentsService {
     }
   }
 
+  private async assertAreaValid(areaId: string): Promise<void> {
+    const area = await this.areasRepository.findOne({
+      where: { id: areaId, isActive: true },
+    });
+    if (!area) {
+      throw new BadRequestException('El área seleccionada no es válida');
+    }
+  }
+
   private async assertCursoValid(cursoId: string): Promise<void> {
     const curso = await this.cursosRepository.findOne({ where: { id: cursoId } });
     if (!curso) {
@@ -301,6 +346,7 @@ export class ContentsService {
     const qb = this.contentsRepository
       .createQueryBuilder('content')
       .leftJoinAndSelect('content.category', 'category')
+      .leftJoinAndSelect('content.area', 'area')
       .leftJoinAndSelect('content.uploadedBy', 'uploadedBy')
       .where('content.cursoId = :cursoId', { cursoId });
 

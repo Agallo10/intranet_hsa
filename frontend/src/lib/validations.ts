@@ -56,7 +56,12 @@ export type CursoValues = z.infer<typeof cursoSchema>
 export const documentSchema = z.object({
   title: z.string().min(1, 'El título es obligatorio'),
   description: z.string().optional(),
+  code: z.string().optional(),
+  version: z.string().optional(),
+  elaborationDate: z.string().optional(),
+  updateDate: z.string().optional(),
   categoryId: z.string().optional(),
+  areaId: z.string().optional(),
 })
 
 export type DocumentValues = z.infer<typeof documentSchema>

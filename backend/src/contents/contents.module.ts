@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { extname } from 'node:path';
 import { Content } from './content.entity.js';
 import { Curso } from '../courses/curso.entity.js';
+import { Area } from '../areas/area.entity.js';
 import { ContentsService } from './contents.service.js';
 import { ContentsController } from './contents.controller.js';
 import { CategoriesModule } from '../categories/categories.module.js';
@@ -21,7 +22,7 @@ const safeExt = (originalName: string): string => {
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Content, Curso]),
+    TypeOrmModule.forFeature([Content, Curso, Area]),
     JwtModule.register({}),
     CategoriesModule,
     AuditModule,

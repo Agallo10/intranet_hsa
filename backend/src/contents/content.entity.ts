@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { ContentType } from '../common/content-type.enum.js';
 import { Category } from '../categories/category.entity.js';
+import { Area } from '../areas/area.entity.js';
 import { Curso } from '../courses/curso.entity.js';
 import { User } from '../users/user.entity.js';
 
@@ -24,6 +25,18 @@ export class Content {
 
   @Column({ type: 'text', nullable: true })
   description: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  code: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  version: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  elaborationDate: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  updateDate: string | null;
 
   @Column({ type: 'enum', enum: ContentType })
   type: ContentType;
@@ -60,6 +73,14 @@ export class Content {
   @ManyToOne(() => Category, { onDelete: 'SET NULL', nullable: true })
   @JoinColumn({ name: 'categoryId' })
   category: Category | null;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  areaId: string | null;
+
+  @ManyToOne(() => Area, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'areaId' })
+  area: Area | null;
 
   @Index()
   @Column({ type: 'uuid', nullable: true })

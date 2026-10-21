@@ -20,10 +20,21 @@ export type CategoryDto = {
   isActive: boolean
 }
 
+export type AreaDto = {
+  id: string
+  name: string
+  slug: string
+  isActive: boolean
+}
+
 export type ContentDto = {
   id: string
   title: string
   description: string | null
+  code: string | null
+  version: string | null
+  elaborationDate: string | null
+  updateDate: string | null
   type: ContentType
   originalName: string | null
   mimeType: string | null
@@ -35,6 +46,7 @@ export type ContentDto = {
   createdAt: string
   updatedAt: string
   category: { id: string; name: string; slug: string } | null
+  area: { id: string; name: string; slug: string } | null
   uploadedBy: { id: string; fullName: string } | null
 }
 

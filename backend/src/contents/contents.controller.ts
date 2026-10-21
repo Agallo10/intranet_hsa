@@ -79,8 +79,13 @@ export class ContentsController {
     body: {
       title?: string;
       description?: string;
+      code?: string;
+      version?: string;
+      elaborationDate?: string;
+      updateDate?: string;
       type?: string;
       categoryId?: string;
+      areaId?: string;
       cursoId?: string;
       position?: string;
       embedUrl?: string;
@@ -115,8 +120,13 @@ export class ContentsController {
       {
         title: body.title,
         description: body.description,
+        code: body.code || null,
+        version: body.version || null,
+        elaborationDate: body.elaborationDate || null,
+        updateDate: body.updateDate || null,
         type: body.type as ContentType,
         categoryId: body.categoryId || null,
+        areaId: body.areaId || null,
         cursoId: body.cursoId || null,
         position: body.position ? Number(body.position) : undefined,
         embedUrl: body.embedUrl || null,

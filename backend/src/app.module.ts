@@ -6,6 +6,7 @@ import { AppController } from './app.controller.js';
 import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
+import { AreasModule } from './areas/areas.module.js';
 import { ContentsModule } from './contents/contents.module.js';
 import { CoursesModule } from './courses/courses.module.js';
 import { NewsModule } from './news/news.module.js';
@@ -36,6 +37,7 @@ import { RolesGuard } from './common/guards/roles.guard.js';
     AuthModule,
     UsersModule,
     CategoriesModule,
+    AreasModule,
     ContentsModule,
     CoursesModule,
     NewsModule,

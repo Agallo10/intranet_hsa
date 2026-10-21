@@ -15,6 +15,7 @@ import { CursoForm } from './pages/CursoForm'
 import { Users } from './pages/admin/Users'
 import { Categories } from './pages/admin/Categories'
 import { CategoriasNoticias } from './pages/admin/CategoriasNoticias'
+import { Areas } from './pages/admin/Areas'
 import { Auditoria } from './pages/admin/Auditoria'
 
 export default function App() {
@@ -47,6 +48,7 @@ export default function App() {
           <Route element={<RequireAuth roles={['admin']} />}>
             <Route path="admin/usuarios" element={<Users />} />
             <Route path="admin/categorias" element={<Categories />} />
+            <Route path="admin/areas" element={<Areas />} />
             <Route path="admin/categorias-noticias" element={<CategoriasNoticias />} />
             <Route path="admin/auditoria" element={<Auditoria />} />
           </Route>
