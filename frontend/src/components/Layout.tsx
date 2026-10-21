@@ -38,10 +38,7 @@ export function Layout() {
   const [categoriesOpen, setCategoriesOpen] = useState(false)
 
   useEffect(() => {
-    if (
-      location.pathname.startsWith('/admin/categorias') ||
-      location.pathname.startsWith('/admin/areas')
-    ) {
+    if (location.pathname.startsWith('/admin/categorias')) {
       setCategoriesOpen(true)
     }
   }, [location.pathname])
@@ -127,12 +124,13 @@ export function Layout() {
                     <Newspaper className="size-4" />
                     Noticias
                   </NavLink>
-                  <NavLink to="/admin/areas" end className={navLinkClass}>
-                    <Building2 className="size-4" />
-                    Áreas
-                  </NavLink>
                 </div>
               )}
+
+              <NavLink to="/admin/areas" className={navLinkClass}>
+                <Building2 className="size-4" />
+                Áreas
+              </NavLink>
 
               <NavLink to="/admin/auditoria" className={navLinkClass}>
                 <History className="size-4" />

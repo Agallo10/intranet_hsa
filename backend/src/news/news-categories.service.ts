@@ -52,8 +52,13 @@ export class NewsCategoriesService {
       throw new NotFoundException('Categoría no encontrada');
     }
     if (dto.name !== undefined) {
+      const slug = slugify(dto.name);
+      const duplicate = await this.repository.findOne({ where: { slug } });
+      if (duplicate && duplicate.id !== id) {
+        throw new ConflictException('Ya existe una categoría con ese nombre');
+      }
       category.name = dto.name;
-      category.slug = slugify(dto.name);
+      category.slug = slug;
     }
     if (dto.isActive !== undefined) category.isActive = dto.isActive;
     return this.repository.save(category);
