@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { AlertCircle, Lock } from 'lucide-react'
 import { useAuth } from '../features/auth/AuthContext'
 import { getErrorMessage } from '../lib/api'
@@ -20,10 +20,13 @@ import {
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
 export function Login() {
-  const { login } = useAuth()
+  const { login, isAuthenticated } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const [sessionExpired] = useState(() => tokenStore.consumeSessionExpired())
+
+  // Si ya había una sesión guardada al entrar al login, ir al inicio.
+  const initiallyAuthenticated = useRef(isAuthenticated).current
 
   const from = (location.state as { from?: { pathname?: string } } | null)?.from
     ?.pathname ?? '/'
@@ -37,6 +40,11 @@ export function Login() {
     resolver: zodResolver(loginSchema),
     defaultValues: { username: '', password: '' },
   })
+
+  // Si ya había sesión guardada, no mostrar el login: ir al inicio.
+  if (initiallyAuthenticated) {
+    return <Navigate to={from} replace />
+  }
 
   async function onSubmit(values: LoginValues) {
     try {
