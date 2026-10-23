@@ -24,6 +24,7 @@ interface DataTableProps<TData extends RowData> {
   data: TData[]
   searchPlaceholder?: string
   emptyMessage?: string
+  initialSorting?: SortingState
 }
 
 export function DataTable<TData extends RowData>({
@@ -31,8 +32,9 @@ export function DataTable<TData extends RowData>({
   data,
   searchPlaceholder,
   emptyMessage = 'No hay resultados',
+  initialSorting = [],
 }: DataTableProps<TData>) {
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>(initialSorting)
   const [globalFilter, setGlobalFilter] = useState('')
 
   const table = useLegacyTable({

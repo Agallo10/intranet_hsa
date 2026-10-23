@@ -173,7 +173,7 @@ export function Layout() {
       </aside>
 
       <main className="flex-1 bg-muted/40">
-        <div className="mx-auto max-w-5xl px-6 py-6">
+        <div className="mx-auto max-w-[1600px] px-6 py-6">
           <Outlet />
         </div>
       </main>

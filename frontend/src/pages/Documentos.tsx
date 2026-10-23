@@ -31,11 +31,10 @@ import {
 } from '@/components/ui/dialog'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`
-  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`
+function formatDate(value: string): string {
+  const [y, m, d] = value.split('-')
+  if (!y || !m || !d) return value
+  return `${d}/${m}/${y}`
 }
 
 const isPdf = (mime: string | null) => mime === 'application/pdf'
@@ -122,15 +121,13 @@ export function Documentos() {
       cell: ({ row }) => row.original.area?.name ?? '—',
     },
     {
-      accessorKey: 'sizeBytes',
-      header: 'Tamaño',
-      cell: ({ row }) => formatBytes(row.original.sizeBytes ?? 0),
-    },
-    {
-      accessorKey: 'createdAt',
+      id: 'fecha',
       header: 'Fecha',
-      cell: ({ row }) =>
-        new Date(row.original.createdAt).toLocaleDateString('es-CO'),
+      accessorFn: (row) => row.updateDate ?? row.elaborationDate ?? '',
+      cell: ({ row }) => {
+        const d = row.original.updateDate ?? row.original.elaborationDate
+        return d ? formatDate(d) : '—'
+      },
     },
     {
       id: 'actions',
@@ -210,6 +207,7 @@ export function Documentos() {
         data={documentsQuery.data ?? []}
         searchPlaceholder="Buscar documento..."
         emptyMessage="No hay documentos"
+        initialSorting={[{ id: 'title', desc: false }]}
       />
 
       {canPublish && (
