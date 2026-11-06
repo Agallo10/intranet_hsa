@@ -39,6 +39,26 @@ function formatDate(value: string): string {
 
 const isPdf = (mime: string | null) => mime === 'application/pdf'
 
+function fileTypeLabel(mime: string | null): string {
+  if (!mime) return '—'
+  if (mime === 'application/pdf') return 'PDF'
+  if (
+    mime === 'application/msword' ||
+    mime.includes('wordprocessingml')
+  )
+    return 'Word'
+  if (mime === 'application/vnd.ms-excel' || mime.includes('spreadsheetml'))
+    return 'Excel'
+  if (
+    mime === 'application/vnd.ms-powerpoint' ||
+    mime.includes('presentationml')
+  )
+    return 'PowerPoint'
+  if (mime.startsWith('video/')) return 'Video'
+  if (mime.startsWith('audio/')) return 'Audio'
+  return 'Otro'
+}
+
 export function Documentos() {
   const { user } = useAuth()
   const canPublish =
@@ -104,6 +124,11 @@ export function Documentos() {
       accessorKey: 'code',
       header: 'Código',
       cell: ({ row }) => row.original.code ?? '—',
+    },
+    {
+      accessorFn: (row) => fileTypeLabel(row.mimeType),
+      header: 'Tipo',
+      cell: ({ row }) => fileTypeLabel(row.original.mimeType),
     },
     {
       accessorKey: 'version',
@@ -608,7 +633,7 @@ function DocumentUploadDialog({
             <Input
               ref={fileRef}
               type="file"
-              accept=".pdf,application/pdf"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf"
             />
           </div>
 

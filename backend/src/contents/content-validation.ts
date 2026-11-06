@@ -3,7 +3,15 @@ import { open } from 'node:fs/promises';
 import { ContentType } from '../common/content-type.enum.js';
 
 const ALLOWED_VIDEO = new Set(['video/mp4', 'video/webm']);
-const ALLOWED_DOCUMENT = new Set(['application/pdf']);
+const ALLOWED_DOCUMENT = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
 
 export function validateContentFile(
   mimeType: string,
@@ -52,6 +60,34 @@ const SIGNATURE_RULES: SignatureRule[] = [
   {
     mimeTypes: ['application/pdf'],
     matches: (buf) => buf.length >= 4 && buf.toString('ascii', 0, 4) === '%PDF',
+  },
+  {
+    // Formatos Office clásicos (.doc, .xls, .ppt) — firma OLE2
+    mimeTypes: [
+      'application/msword',
+      'application/vnd.ms-excel',
+      'application/vnd.ms-powerpoint',
+    ],
+    matches: (buf) =>
+      buf.length >= 8 &&
+      buf[0] === 0xd0 &&
+      buf[1] === 0xcf &&
+      buf[2] === 0x11 &&
+      buf[3] === 0xe0 &&
+      buf[4] === 0xa1 &&
+      buf[5] === 0xb1 &&
+      buf[6] === 0x1a &&
+      buf[7] === 0xe1,
+  },
+  {
+    // Formatos Office Open XML (.docx, .xlsx, .pptx) — contenedor ZIP (PK)
+    mimeTypes: [
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ],
+    matches: (buf) =>
+      buf.length >= 4 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03,
   },
 ];
 

@@ -37,15 +37,19 @@ describe('validateContentFile', () => {
     ).toThrow(BadRequestException);
   });
 
-  it('rechaza word/excel (solo se permiten PDF)', () => {
-    expect(() =>
-      validateContentFile(
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        ContentType.Document,
-        1024,
-        1024 * 1024,
-      ),
-    ).toThrow(BadRequestException);
+  it('acepta word/excel/powerpoint (documentos editables)', () => {
+    for (const mime of [
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ]) {
+      expect(() =>
+        validateContentFile(mime, ContentType.Document, 1024, 1024 * 1024),
+      ).not.toThrow();
+    }
   });
 
   it('rechaza un video cuando el tipo esperado es documento', () => {
@@ -90,14 +94,23 @@ describe('validateFileSignature', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('rechaza docx/xlsx (ya no soportados)', async () => {
+  it('acepta docx/xlsx/pptx con firma PK (ZIP)', async () => {
     const path = await write('doc.docx', [0x50, 0x4b, 0x03, 0x04]);
     await expect(
       validateFileSignature(
         path,
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       ),
-    ).rejects.toThrow(BadRequestException);
+    ).resolves.toBeUndefined();
+  });
+
+  it('acepta doc/xls/ppt con firma OLE2', async () => {
+    const path = await write('doc.doc', [
+      0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+    ]);
+    await expect(
+      validateFileSignature(path, 'application/msword'),
+    ).resolves.toBeUndefined();
   });
 
   it('rechaza un PDF cuyo contenido no coincide', async () => {
