@@ -112,11 +112,12 @@ export function Documentos() {
       header: 'Documento',
       cell: ({ row }) => (
         <button
-          className="flex items-center gap-2 font-medium hover:underline"
+          title={row.original.title}
+          className="flex max-w-[300px] items-center gap-2 font-medium hover:underline"
           onClick={() => setPreviewing(row.original)}
         >
-          <FileText className="size-4 text-muted-foreground" />
-          {row.original.title}
+          <FileText className="size-4 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 truncate">{row.original.title}</span>
         </button>
       ),
     },
@@ -141,11 +142,6 @@ export function Documentos() {
       cell: ({ row }) => row.original.category?.name ?? '—',
     },
     {
-      accessorFn: (row) => row.area?.name ?? '',
-      header: 'Área',
-      cell: ({ row }) => row.original.area?.name ?? '—',
-    },
-    {
       id: 'fecha',
       header: 'Fecha',
       accessorFn: (row) => row.updateDate ?? row.elaborationDate ?? '',
@@ -156,7 +152,7 @@ export function Documentos() {
     },
     {
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) => {
         const content = row.original
         return (
