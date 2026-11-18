@@ -147,12 +147,14 @@ export class ContentsController {
 
   @Patch(':id')
   @Roles(Role.Admin, Role.Editor, Role.GestorDocumental)
+  @UseInterceptors(FileInterceptor('file'))
   async update(
     @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File | undefined,
     @Body() dto: UpdateContentDto,
     @Req() req: { user: AuthUser },
   ) {
-    const content = await this.contentsService.update(id, dto, req.user);
+    const content = await this.contentsService.update(id, dto, req.user, file);
     return toContentDto(content);
   }
 

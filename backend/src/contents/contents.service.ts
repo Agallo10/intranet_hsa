@@ -248,42 +248,82 @@ export class ContentsService {
     id: string,
     dto: UpdateContentDto,
     user: AuthUser,
+    file?: Express.Multer.File,
   ): Promise<Content> {
-    const content = await this.findOne(id, user);
-    this.assertCanModify(content, user);
+    try {
+      const content = await this.findOne(id, user);
+      this.assertCanModify(content, user);
 
-    if (dto.title !== undefined) content.title = dto.title;
-    if (dto.description !== undefined) content.description = dto.description;
-    if (dto.code !== undefined) content.code = dto.code;
-    if (dto.version !== undefined) content.version = dto.version;
-    if (dto.elaborationDate !== undefined)
-      content.elaborationDate = this.normalizeDate(dto.elaborationDate);
-    if (dto.updateDate !== undefined)
-      content.updateDate = this.normalizeDate(dto.updateDate);
-    if (dto.categoryId !== undefined) {
-      if (dto.categoryId) {
-        await this.assertCategoryValid(dto.categoryId);
-        content.categoryId = dto.categoryId;
-      } else {
-        content.categoryId = null;
+      if (file) {
+        if (
+          content.type === ContentType.Video &&
+          user.role === Role.GestorDocumental
+        ) {
+          throw new ForbiddenException(
+            'El gestor documental solo puede subir documentos',
+          );
+        }
+        validateContentFile(
+          file.mimetype,
+          content.type,
+          file.size,
+          this.maxFileSizeBytes(),
+        );
+        await validateFileSignature(file.path, file.mimetype);
       }
-    }
-    if (dto.areaId !== undefined) {
-      if (dto.areaId) {
-        await this.assertAreaValid(dto.areaId);
-        content.areaId = dto.areaId;
-      } else {
-        content.areaId = null;
-      }
-    }
-    if (dto.isPublished !== undefined) content.isPublished = dto.isPublished;
-    if (dto.position !== undefined) content.position = dto.position;
 
-    const saved = await this.contentsRepository.save(content);
-    return this.contentsRepository.findOneOrFail({
-      where: { id: saved.id },
-      relations: { category: true, area: true, uploadedBy: true },
-    });
+      if (dto.title !== undefined) content.title = dto.title;
+      if (dto.description !== undefined) content.description = dto.description;
+      if (dto.code !== undefined) content.code = dto.code;
+      if (dto.version !== undefined) content.version = dto.version;
+      if (dto.elaborationDate !== undefined)
+        content.elaborationDate = this.normalizeDate(dto.elaborationDate);
+      if (dto.updateDate !== undefined)
+        content.updateDate = this.normalizeDate(dto.updateDate);
+      if (dto.categoryId !== undefined) {
+        if (dto.categoryId) {
+          await this.assertCategoryValid(dto.categoryId);
+          content.categoryId = dto.categoryId;
+        } else {
+          content.categoryId = null;
+        }
+      }
+      if (dto.areaId !== undefined) {
+        if (dto.areaId) {
+          await this.assertAreaValid(dto.areaId);
+          content.areaId = dto.areaId;
+        } else {
+          content.areaId = null;
+        }
+      }
+      if (dto.isPublished !== undefined) content.isPublished = dto.isPublished;
+      if (dto.position !== undefined) content.position = dto.position;
+
+      const previousFilePath = file ? this.getFilePath(content) : null;
+      if (file) {
+        content.filePath = file.filename;
+        content.originalName = file.originalname;
+        content.mimeType = file.mimetype;
+        content.sizeBytes = file.size;
+        content.embedUrl = null;
+      }
+
+      const saved = await this.contentsRepository.save(content);
+
+      if (previousFilePath) {
+        await unlink(previousFilePath).catch(() => undefined);
+      }
+
+      return this.contentsRepository.findOneOrFail({
+        where: { id: saved.id },
+        relations: { category: true, area: true, uploadedBy: true },
+      });
+    } catch (err) {
+      if (file) {
+        await unlink(file.path).catch(() => undefined);
+      }
+      throw err;
+    }
   }
 
   async remove(id: string, user: AuthUser): Promise<void> {

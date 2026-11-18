@@ -277,6 +277,7 @@ function EditDocumentDialog({
     resolver: zodResolver(documentSchema),
   })
   const [error, setError] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   const categoriesQuery = useQuery({
     queryKey: ['categories'],
@@ -296,7 +297,22 @@ function EditDocumentDialog({
 
   const editMutation = useMutation({
     mutationFn: async (data: DocumentValues) => {
-      await api.patch(`/contents/${content!.id}`, data)
+      const file = fileRef.current?.files?.[0]
+      if (!file) {
+        await api.patch(`/contents/${content!.id}`, data)
+        return
+      }
+      const form = new FormData()
+      form.append('file', file)
+      form.append('title', data.title)
+      form.append('description', data.description ?? '')
+      form.append('code', data.code ?? '')
+      form.append('version', data.version ?? '')
+      form.append('elaborationDate', data.elaborationDate ?? '')
+      form.append('updateDate', data.updateDate ?? '')
+      form.append('categoryId', data.categoryId ?? '')
+      form.append('areaId', data.areaId ?? '')
+      await api.patch(`/contents/${content!.id}`, form)
     },
     onSuccess: () => {
       onClose()
@@ -308,6 +324,7 @@ function EditDocumentDialog({
   // Prefill when content changes
   useEffect(() => {
     if (content) {
+      if (fileRef.current) fileRef.current.value = ''
       reset({
         title: content.title,
         description: content.description ?? '',
@@ -326,7 +343,15 @@ function EditDocumentDialog({
   }
 
   return (
-    <Dialog open={!!content} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={!!content}
+      onOpenChange={(open) => {
+        if (!open) {
+          setError(null)
+          onClose()
+        }
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Editar documento</DialogTitle>
@@ -402,6 +427,21 @@ function EditDocumentDialog({
                 </Select>
               )}
             />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-file">Archivo</Label>
+            <p className="text-xs text-muted-foreground">
+              Actual: {content?.originalName ?? 'sin archivo adjunto'}
+            </p>
+            <Input
+              id="edit-file"
+              ref={fileRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf"
+            />
+            <p className="text-xs text-muted-foreground">
+              Seleccione un archivo solo si desea reemplazar el actual.
+            </p>
           </div>
 
           {error && (
