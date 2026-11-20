@@ -195,6 +195,48 @@ describe('parseDocumentHeader', () => {
     });
   });
 
+  it('lee encabezados con etiquetas y valores intercalados en columnas', () => {
+    const page = [
+      'NIT: 800179870-2',
+      'FORMATO DE ACTA',
+      'CODIGO: FECHA DE ELABORACIÓN:',
+      'FOREOPYC-130 23 de febrero de 2022',
+      'FECHA DE ACTUALIZACIÓN:',
+      'VERSIÓN: 26 de junio del 2025',
+      '3.0 Página 1 de 5',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title: 'FORMATO DE ACTA',
+      code: 'FOREOPYC-130',
+      version: '3.0',
+      elaborationDate: '2022-02-23',
+      updateDate: '2025-06-26',
+      pageCount: 5,
+    });
+  });
+
+  it('acepta fechas con guiones y con el mes primero', () => {
+    const withHyphens = parseDocumentHeader([
+      [
+        'FECHA DE ELABORACIÓN:\n23 -septiembre -2025',
+        'FECHA ACTUALIZACIÓN:\n15 -mayo -2026',
+      ].join('\n'),
+    ]);
+    expect(withHyphens.elaborationDate).toBe('2025-09-23');
+    expect(withHyphens.updateDate).toBe('2026-05-15');
+
+    const monthFirst = parseDocumentHeader([
+      'FECHA DE ELABORACIÓN:\nAbril 1 de 2025',
+    ]);
+    expect(monthFirst.elaborationDate).toBe('2025-04-01');
+  });
+
+  it('deja la fecha vacía si el documento solo trae mes y año', () => {
+    const page = ['FECHA DE ELABORACIÓN:', 'julio del 2021'].join('\n');
+    expect(parseDocumentHeader([page]).elaborationDate).toBeNull();
+  });
+
   it('no toma como código una etiqueta de metadatos', () => {
     const page = ['CÓDIGO:', 'FECHA DE ELABORACIÓN:', '10 de enero 2026'].join(
       '\n',

@@ -54,12 +54,37 @@ export function normalizeHeaderText(raw: string): string {
     .join('\n');
 }
 
+const DAY = '\\d{1,2}';
+const MONTH_WORD = '[a-záéíóúñ]+';
+const YEAR = '\\d{4}';
+
+// Formatos de fecha observados en los documentos: "26 de enero de 2018",
+// "21 agosto 2026", "23 -septiembre -2025", "Abril 1 de 2025",
+// "05/03/2021" y "2024-12-31".
+const DATE_VALUE = `(?:${DAY}\\s*(?:de\\s+)?[-–]?\\s*${MONTH_WORD}\\s*(?:de(?:l)?\\s+)?[-–]?\\s*${YEAR}|${MONTH_WORD}\\s+${DAY}\\s+(?:de(?:l)?\\s+)?${YEAR}|${DAY}/${DAY}/${YEAR}|${YEAR}-${DAY}-${DAY})`;
+
 function toIsoDate(value: string): string | null {
-  const spanish = /(\d{1,2})\s+(?:de\s+)?([a-záéíóúñ]+)\s+(?:de\s+)?(\d{4})/i.exec(value);
-  if (spanish) {
-    const month = MONTHS[spanish[2].toLowerCase()];
-    if (!month) return null;
-    return `${spanish[3]}-${month}-${spanish[1].padStart(2, '0')}`;
+  const dayFirst = new RegExp(
+    `(${DAY})\\s*(?:de\\s+)?[-–]?\\s*(${MONTH_WORD})\\s*(?:de(?:l)?\\s+)?[-–]?\\s*(${YEAR})`,
+    'i',
+  ).exec(value);
+  if (dayFirst) {
+    const month = MONTHS[dayFirst[2].toLowerCase()];
+    if (month) {
+      return `${dayFirst[3]}-${month}-${dayFirst[1].padStart(2, '0')}`;
+    }
+  }
+
+  // "Abril 1 de 2025"
+  const monthFirst = new RegExp(
+    `(${MONTH_WORD})\\s+(${DAY})\\s+(?:de(?:l)?\\s+)?(${YEAR})`,
+    'i',
+  ).exec(value);
+  if (monthFirst) {
+    const month = MONTHS[monthFirst[1].toLowerCase()];
+    if (month) {
+      return `${monthFirst[3]}-${month}-${monthFirst[2].padStart(2, '0')}`;
+    }
   }
 
   const dmy = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(value);
@@ -78,8 +103,6 @@ function toIsoDate(value: string): string | null {
 // Acepta que la etiqueta y el valor estén separados por saltos de línea o
 // espacios, pero no por otro texto con contenido.
 const SEPARATOR = '[^A-Za-z0-9]{0,32}';
-const DATE_VALUE =
-  '(\\d{1,2}\\s+(?:de\\s+)?[a-záéíóúñ]+\\s+(?:de\\s+)?\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{4}-\\d{2}-\\d{2})';
 
 const TITLE_PREFIX =
   /^(procedimiento|t[ií]tulo|nombre|documento)\s*:\s*(.+)$/i;
@@ -195,24 +218,78 @@ function extractCode(text: string): string | null {
     window,
   );
   const code = match?.[1];
-  if (!code || CODE_STOPWORDS.test(code)) return null;
-  if (code.length < 3 && !/[0-9\-–]/.test(code)) return null;
-  return code;
+  if (code && !CODE_STOPWORDS.test(code)) {
+    if (code.length >= 3 || /[0-9\-–]/.test(code)) return code;
+  }
+
+  // Plantillas con columnas: el valor puede quedar después de otra etiqueta
+  // en la misma línea. Se busca un token con forma de código en el encabezado.
+  const end = Math.min(headerBlockEnd(text, 0), 600);
+  const block = text.slice(0, end);
+  return /\b[A-Z][A-Z0-9]{2,}(?:[-–][A-Z0-9]+)+\b/.exec(block)?.[0] ?? null;
+}
+
+/**
+ * Fin del bloque de encabezado a partir de una posición: se corta en el
+ * marcador de página o el inicio del contenido para no tomar datos del cuerpo.
+ */
+function headerBlockEnd(text: string, fromIndex: number): number {
+  const rest = text.slice(fromIndex);
+  const stop =
+    /\b(p[áa]gina|hoja|tabla\s+de\s+contenido|introducci[óo]n|objetivo)\b/i.exec(
+      rest,
+    );
+  return stop ? fromIndex + stop.index : text.length;
 }
 
 /**
  * Busca una única fecha dentro del bloque de encabezado que sigue a una
- * etiqueta. Se corta en el marcador de página o el inicio del contenido para
- * no tomar fechas del cuerpo del documento.
+ * etiqueta. Si se indica, se corta en la siguiente etiqueta de fecha para no
+ * mezclar elaboración con actualización.
  */
-function findDateInHeaderBlock(text: string, fromIndex: number): string | null {
-  const rest = text.slice(fromIndex, fromIndex + 200);
-  const stop = /\b(p[áa]gina|hoja|introducci[óo]n|contenido|objetivo)\b/i.exec(
-    rest,
-  );
-  const block = stop ? rest.slice(0, stop.index) : rest;
+function findDateInHeaderBlock(
+  text: string,
+  fromIndex: number,
+  stopAtNextDateLabel = false,
+): string | null {
+  const end = Math.min(headerBlockEnd(text, fromIndex), fromIndex + 300);
+  let block = text.slice(fromIndex, end);
+  if (stopAtNextDateLabel) {
+    const nextDateLabel = /\bfecha\b/i.exec(block);
+    if (nextDateLabel) block = block.slice(0, nextDateLabel.index);
+  }
   const dates = [...new Set(block.match(new RegExp(DATE_VALUE, 'gi')) ?? [])];
   return dates.length === 1 ? dates[0] : null;
+}
+
+/**
+ * La versión es un número corto. Si el primer número después de la etiqueta
+ * forma parte de una fecha ("26 de junio..."), se busca una versión con punto
+ * decimal o el primer número independiente antes del marcador de página.
+ */
+function extractVersion(text: string): string | null {
+  const label = /\bversi[óo]n\b/i.exec(text);
+  if (!label) return null;
+
+  const start = label.index + label[0].length;
+  const end = Math.min(headerBlockEnd(text, start), start + 200);
+  // Se quitan las fechas para no confundir el año o el día con la versión.
+  const block = text
+    .slice(start, end)
+    .replace(new RegExp(DATE_VALUE, 'gi'), ' ');
+
+  const decimal = /\b\d{1,3}\.\d{1,3}\b/.exec(block);
+  if (decimal) return decimal[0];
+
+  for (const match of block.matchAll(/\b\d{1,3}\b/g)) {
+    const after = block.slice(
+      match.index + match[0].length,
+      match.index + match[0].length + 6,
+    );
+    if (/^\s+de(?:l)?\s/i.test(after)) continue;
+    return match[0];
+  }
+  return null;
 }
 
 export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
@@ -223,15 +300,22 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
 
   const code = extractCode(text);
 
-  const version = new RegExp(
-    `\\bversi[óo]n\\b${SEPARATOR}(\\d{1,3}(?:\\.\\d{1,3})*)`,
-    'i',
-  ).exec(text)?.[1];
+  const version = extractVersion(text);
 
-  const elaborationRaw = new RegExp(
+  const elaborationLabel = /\bfecha\s+de\s+elaboraci[óo]n\b/i.exec(text);
+  let elaborationRaw = new RegExp(
     `\\bfecha\\s+de\\s+elaboraci[óo]n\\b${SEPARATOR}${DATE_VALUE}`,
     'i',
   ).exec(text)?.[1];
+
+  if (!elaborationRaw && elaborationLabel) {
+    elaborationRaw =
+      findDateInHeaderBlock(
+        text,
+        elaborationLabel.index + elaborationLabel[0].length,
+        true,
+      ) ?? undefined;
+  }
   const updateLabel = /\bfecha\s+(?:de\s+)?actualizaci[óo]n\b/i.exec(text);
   let updateRaw = new RegExp(
     `\\bfecha\\s+(?:de\\s+)?actualizaci[óo]n\\b${SEPARATOR}${DATE_VALUE}`,
