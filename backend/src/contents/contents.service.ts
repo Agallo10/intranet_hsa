@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { unlink } from 'node:fs/promises';
+import { readFile, unlink } from 'node:fs/promises';
 import { Repository } from 'typeorm';
 import { Content } from './content.entity.js';
 import { CreateContentInput, UpdateContentDto } from './dto/content.dto.js';
@@ -14,6 +14,11 @@ import {
   validateContentFile,
   validateFileSignature,
 } from './content-validation.js';
+import {
+  DocumentHeaderFields,
+  parseDocumentHeader,
+} from './header-extraction.js';
+import { extractPdfText } from './pdf-text.js';
 import { resolveUploadDir, resolveUploadPath } from '../common/storage.js';
 import { Role } from '../common/role.enum.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
@@ -32,6 +37,11 @@ export interface ListContentsQuery {
   page?: number;
   limit?: number;
   scope?: 'mine';
+}
+
+export interface ContentHeaderExtraction extends DocumentHeaderFields {
+  supported: boolean;
+  message: string | null;
 }
 
 export const toContentDto = (content: Content) => ({
@@ -323,6 +333,69 @@ export class ContentsService {
         await unlink(file.path).catch(() => undefined);
       }
       throw err;
+    }
+  }
+
+  /**
+   * Lee el encabezado de un documento recién subido para precargar sus
+   * metadatos. Solo se soportan PDF con capa de texto; el archivo temporal se
+   * elimina siempre, porque esta operación no lo guarda.
+   */
+  async extractHeaderMetadata(
+    file: Express.Multer.File | undefined,
+  ): Promise<ContentHeaderExtraction> {
+    if (!file) {
+      throw new BadRequestException('Debe adjuntar un archivo');
+    }
+
+    try {
+      validateContentFile(
+        file.mimetype,
+        ContentType.Document,
+        file.size,
+        this.maxFileSizeBytes(),
+      );
+
+      if (file.mimetype !== 'application/pdf') {
+        return {
+          supported: false,
+          title: null,
+          code: null,
+          version: null,
+          elaborationDate: null,
+          updateDate: null,
+          pageCount: null,
+          message:
+            'La lectura automática del encabezado solo está disponible para archivos PDF',
+        };
+      }
+
+      await validateFileSignature(file.path, file.mimetype);
+
+      const buffer = await readFile(file.path);
+      let pages: string[];
+      let totalPages: number;
+      try {
+        ({ pages, totalPages } = await extractPdfText(buffer));
+      } catch {
+        throw new BadRequestException('No se pudo leer el archivo PDF');
+      }
+
+      const fields = parseDocumentHeader(pages);
+      const hasText = pages.some((page) => page.trim().length > 0);
+
+      return {
+        supported: true,
+        ...fields,
+        pageCount: fields.pageCount ?? totalPages,
+        message: !hasText
+          ? 'El PDF no tiene texto seleccionable (parece escaneado); completá los datos manualmente'
+          : fields.code || fields.title || fields.elaborationDate
+            ? null
+            : 'No se reconoció el encabezado del documento; completá los datos manualmente',
+      };
+    } finally {
+      await unlink(file.path).catch(() => undefined);
     }
   }
 

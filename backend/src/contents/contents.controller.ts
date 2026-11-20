@@ -139,6 +139,13 @@ export class ContentsController {
     return toContentDto(content);
   }
 
+  @Post('extract-metadata')
+  @Roles(Role.Admin, Role.Editor, Role.GestorDocumental)
+  @UseInterceptors(FileInterceptor('file'))
+  async extractMetadata(@UploadedFile() file: Express.Multer.File | undefined) {
+    return this.contentsService.extractHeaderMetadata(file);
+  }
+
   @Get(':id')
   async findOne(@Param('id') id: string, @Req() req: { user: AuthUser }) {
     const content = await this.contentsService.findOne(id, req.user);

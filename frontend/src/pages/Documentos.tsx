@@ -1,11 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Download, Eye, FileText, Pencil, Plus, Trash2, Upload } from 'lucide-react'
 import { api, getErrorMessage } from '../lib/api'
 import { authedUrl } from '../lib/token'
-import type { AreaDto, CategoryDto, ContentDto, ListResponse } from '../lib/types'
+import type {
+  AreaDto,
+  CategoryDto,
+  ContentDto,
+  ContentHeaderExtraction,
+  ListResponse,
+} from '../lib/types'
 import { documentSchema, type DocumentValues } from '../lib/validations'
 import { useAuth } from '../features/auth/AuthContext'
 import { DataTable } from '../components/data-table/data-table'
@@ -523,12 +529,20 @@ function DocumentUploadDialog({
 }) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const [headerMessage, setHeaderMessage] = useState<string | null>(null)
+  const [readingHeader, setReadingHeader] = useState(false)
+  const extractionId = useRef(0)
+  const autoFilled = useRef<
+    Partial<Record<'title' | 'code' | 'version' | 'elaborationDate' | 'updateDate', string>>
+  >({})
 
   const {
     register,
     control,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
     formState: { errors },
   } = useForm<DocumentValues>({
     resolver: zodResolver(documentSchema),
@@ -557,6 +571,8 @@ function DocumentUploadDialog({
     },
     onSuccess: () => {
       setError(null)
+      setHeaderMessage(null)
+      autoFilled.current = {}
       reset()
       if (fileRef.current) fileRef.current.value = ''
       onOpenChange(false)
@@ -564,6 +580,74 @@ function DocumentUploadDialog({
     },
     onError: (err) => setError(getErrorMessage(err)),
   })
+
+  async function onFileSelected(event: ChangeEvent<HTMLInputElement>) {
+    setHeaderMessage(null)
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const requestId = ++extractionId.current
+    setReadingHeader(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await api.post<ContentHeaderExtraction>(
+        '/contents/extract-metadata',
+        form,
+      )
+      // Una respuesta vieja no debe pisar la selección más reciente.
+      if (requestId !== extractionId.current) return
+
+      const data = res.data
+
+      if (!data.supported) {
+        setHeaderMessage(data.message)
+        return
+      }
+
+      const fields: Array<
+        [
+          'title' | 'code' | 'version' | 'elaborationDate' | 'updateDate',
+          string | null,
+        ]
+      > = [
+        ['title', data.title],
+        ['code', data.code],
+        ['version', data.version],
+        ['elaborationDate', data.elaborationDate],
+        ['updateDate', data.updateDate],
+      ]
+
+      for (const [field, value] of fields) {
+        const current = getValues(field) ?? ''
+        const previousAuto = autoFilled.current[field] ?? ''
+        const userEdited = current !== '' && current !== previousAuto
+        if (userEdited) continue
+        setValue(field, value ?? '')
+        autoFilled.current[field] = value ?? ''
+      }
+
+      const found = [
+        data.code ? `código ${data.code}` : null,
+        data.version ? `versión ${data.version}` : null,
+      ].filter(Boolean)
+
+      setHeaderMessage(
+        data.message ??
+          (found.length > 0
+            ? `Encabezado leído: ${found.join(', ')}`
+            : 'Encabezado leído'),
+      )
+    } catch (err) {
+      if (requestId === extractionId.current) {
+        setHeaderMessage(getErrorMessage(err))
+      }
+    } finally {
+      if (requestId === extractionId.current) {
+        setReadingHeader(false)
+      }
+    }
+  }
 
   function onSubmit(values: DocumentValues) {
     const file = fileRef.current?.files?.[0]
@@ -669,8 +753,17 @@ function DocumentUploadDialog({
             <Input
               ref={fileRef}
               type="file"
+              onChange={onFileSelected}
               accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,application/pdf"
             />
+            {readingHeader && (
+              <p className="text-xs text-muted-foreground">
+                Leyendo encabezado del documento...
+              </p>
+            )}
+            {!readingHeader && headerMessage && (
+              <p className="text-xs text-muted-foreground">{headerMessage}</p>
+            )}
           </div>
 
           {error && (

@@ -50,6 +50,17 @@ export type ContentDto = {
   uploadedBy: { id: string; fullName: string } | null
 }
 
+export type ContentHeaderExtraction = {
+  supported: boolean
+  title: string | null
+  code: string | null
+  version: string | null
+  elaborationDate: string | null
+  updateDate: string | null
+  pageCount: number | null
+  message: string | null
+}
+
 export type NewsCategoryDto = {
   id: string
   name: string
