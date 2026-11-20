@@ -55,7 +55,7 @@ export function normalizeHeaderText(raw: string): string {
 }
 
 function toIsoDate(value: string): string | null {
-  const spanish = /(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+(?:de\s+)?(\d{4})/i.exec(value);
+  const spanish = /(\d{1,2})\s+(?:de\s+)?([a-záéíóúñ]+)\s+(?:de\s+)?(\d{4})/i.exec(value);
   if (spanish) {
     const month = MONTHS[spanish[2].toLowerCase()];
     if (!month) return null;
@@ -79,7 +79,7 @@ function toIsoDate(value: string): string | null {
 // espacios, pero no por otro texto con contenido.
 const SEPARATOR = '[^A-Za-z0-9]{0,32}';
 const DATE_VALUE =
-  '(\\d{1,2}\\s+de\\s+[a-záéíóúñ]+\\s+(?:de\\s+)?\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{4}-\\d{2}-\\d{2})';
+  '(\\d{1,2}\\s+(?:de\\s+)?[a-záéíóúñ]+\\s+(?:de\\s+)?\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{4}-\\d{2}-\\d{2})';
 
 const TITLE_PREFIX =
   /^(procedimiento|t[ií]tulo|nombre|documento)\s*:\s*(.+)$/i;
@@ -113,14 +113,48 @@ function findPrefixedTitle(lines: string[], headerIndex: number): string | null 
  * metadatos. Solo se consideran esas líneas: buscar en todo el documento
  * tomaría encabezados de secciones posteriores como si fueran el título.
  */
-function isUppercaseTitleLine(line: string): boolean {
-  if (line.length < 4 || line.length > 120) return false;
+function isUppercaseTitleLine(line: string, minLetters: number): boolean {
+  if (line.length < 2 || line.length > 120) return false;
   if (IGNORED_TITLE_PATTERNS.some((pattern) => pattern.test(line))) return false;
 
   const letters = line.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g, '');
-  if (letters.length < 4) return false;
+  if (letters.length < minLetters) return false;
   const uppercase = letters.replace(/[^A-ZÁÉÍÓÚÑÜ]/g, '');
   return uppercase.length / letters.length >= 0.8;
+}
+
+function isProseTitleLine(line: string): boolean {
+  if (line.length < 4 || line.length > 120) return false;
+  if (IGNORED_TITLE_PATTERNS.some((pattern) => pattern.test(line))) return false;
+  const letters = line.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g, '');
+  return letters.length >= 4;
+}
+
+function longestRun(
+  values: string[],
+  isEligible: (value: string, runLength: number) => boolean,
+): string | null {
+  let best: string | null = null;
+  let current: string[] = [];
+
+  const flush = () => {
+    const joined = current.join(' ').trim();
+    if (joined.length > 0 && (!best || joined.length > best.length)) {
+      best = joined;
+    }
+    current = [];
+  };
+
+  for (const value of values) {
+    if (isEligible(value, current.length)) {
+      current.push(value);
+    } else {
+      flush();
+    }
+  }
+  flush();
+
+  return best;
 }
 
 function findTitle(lines: string[]): string | null {
@@ -130,28 +164,18 @@ function findTitle(lines: string[]): string | null {
   const prefixed = findPrefixedTitle(lines, headerIndex);
   if (prefixed) return prefixed;
 
-  // El título puede ocupar varias líneas consecutivas en mayúsculas.
-  let best: string | null = null;
-  let current: string[] = [];
-  const flush = () => {
-    const joined = current.join(' ').trim();
-    if (joined.length > 0 && (!best || joined.length > best.length)) {
-      best = joined;
-    }
-    current = [];
-  };
+  const candidates = lines
+    .slice(0, headerIndex)
+    .map((line) => line.replace(/[|]+/g, ' ').trim())
+    .filter(Boolean);
 
-  for (const raw of lines.slice(0, headerIndex)) {
-    const value = raw.replace(/[|]+/g, ' ').trim();
-    if (isUppercaseTitleLine(value)) {
-      current.push(value);
-    } else {
-      flush();
-    }
-  }
-  flush();
-
-  return best;
+  // El título puede ocupar varias líneas: en mayúsculas, o en texto normal
+  // cuando la plantilla no lo destaca. Se prefiere el bloque en mayúsculas.
+  return (
+    longestRun(candidates, (value, runLength) =>
+      isUppercaseTitleLine(value, runLength > 0 ? 2 : 4),
+    ) ?? longestRun(candidates, (value) => isProseTitleLine(value))
+  );
 }
 
 // Palabras que pueden seguir a "CÓDIGO:" cuando el valor falta; no son códigos.

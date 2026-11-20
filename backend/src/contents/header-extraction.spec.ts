@@ -125,6 +125,76 @@ describe('parseDocumentHeader', () => {
     });
   });
 
+  it('acepta fechas sin la preposición "de"', () => {
+    const page = [
+      'PROCEDIMIENTO PARA EL CÁLCULO DEL INDICADOR DE',
+      'MORTALIDAD MATERNA',
+      'CÓDIGO:',
+      'EPIPRO001',
+      'FECHA DE ELABORACIÓN:',
+      '21 agosto 2026',
+      'VERSIÓN:',
+      '1.0',
+      'FECHA ACTUALIZACIÓN:',
+      '21 agosto 2026',
+      'PAGINA 1 de 6',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title:
+        'PROCEDIMIENTO PARA EL CÁLCULO DEL INDICADOR DE MORTALIDAD MATERNA',
+      code: 'EPIPRO001',
+      version: '1.0',
+      elaborationDate: '2026-08-21',
+      updateDate: '2026-08-21',
+      pageCount: 6,
+    });
+  });
+
+  it('incluye una sigla corta dentro del título en mayúsculas', () => {
+    const page = [
+      'PROTOCOLO DE NECROPISA',
+      'HSA',
+      'CÓDIGO:',
+      'PRTMREF-01',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe(
+      'PROTOCOLO DE NECROPISA HSA',
+    );
+  });
+
+  it('lee títulos en texto normal repartidos en varias líneas', () => {
+    const page = [
+      'NIT: 800179870-2',
+      'Protocolo para la toma, manejo,',
+      'conservación y envío de muestras',
+      'respiratorias para el evento 591',
+      'CÓDIGO:',
+      'PRTXXX-XX',
+      'FECHA DE',
+      'ELABORACIÓN:',
+      '01 octubre 2026',
+      'VERSIÓN:',
+      'XX',
+      'FECHA',
+      'ACTUALIZACIÓN:',
+      '01 de octubre 2026',
+      'PÁGINA:',
+      'HOJA: 1 DE 12',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title:
+        'PROTOCOLO PARA LA TOMA, MANEJO, CONSERVACIÓN Y ENVÍO DE MUESTRAS RESPIRATORIAS PARA EL EVENTO 591',
+      code: 'PRTXXX-XX',
+      version: null,
+      elaborationDate: '2026-10-01',
+      updateDate: '2026-10-01',
+      pageCount: 12,
+    });
+  });
+
   it('no toma como código una etiqueta de metadatos', () => {
     const page = ['CÓDIGO:', 'FECHA DE ELABORACIÓN:', '10 de enero 2026'].join(
       '\n',
