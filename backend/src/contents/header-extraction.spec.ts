@@ -61,6 +61,50 @@ describe('parseDocumentHeader', () => {
     expect(fields.updateDate).toBe('2024-12-31');
   });
 
+  it('lee el código tal como aparece aunque quede incompleto', () => {
+    const page = ['CÓDIGO:', 'GIMSGP-', 'VERSIÓN:', '1.0'].join('\n');
+
+    const fields = parseDocumentHeader([page]);
+    expect(fields.code).toBe('GIMSGP-');
+    expect(fields.version).toBe('1.0');
+  });
+
+  it('lee el título con prefijo "Procedimiento:" y su continuación', () => {
+    const page = [
+      'NIT: 800179870-2',
+      'Procedimiento: Toma de muestras post-mortem',
+      'por mortalidad de Fiebre Amarilla',
+      'CÓDIGO:',
+      'GIMSGP-',
+      'FECHA DE ELABORACIÓN:',
+      '24 de octubre de 2025',
+      'VERSIÓN:',
+      '1.0',
+      'FECHA ACTUALIZACIÓN:',
+      'Página 1 de 5',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title:
+        'TOMA DE MUESTRAS POST-MORTEM POR MORTALIDAD DE FIEBRE AMARILLA',
+      code: 'GIMSGP-',
+      version: '1.0',
+      elaborationDate: '2025-10-24',
+      updateDate: null,
+      pageCount: 5,
+    });
+  });
+
+  it('no continúa el título con líneas que empiezan en mayúscula', () => {
+    const page = [
+      'Título: Plan de contingencia',
+      'INTRODUCCIÓN GENERAL',
+      'CÓDIGO: PL-01',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe('PLAN DE CONTINGENCIA');
+  });
+
   it('no inventa el título cuando solo hay datos de la entidad', () => {
     const page = [
       'HOSPITAL SAN ANDRES E.S.E.',

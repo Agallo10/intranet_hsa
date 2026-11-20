@@ -81,6 +81,33 @@ const SEPARATOR = '[^A-Za-z0-9]{0,32}';
 const DATE_VALUE =
   '(\\d{1,2}\\s+de\\s+[a-záéíóúñ]+\\s+de\\s+\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{4}-\\d{2}-\\d{2})';
 
+const TITLE_PREFIX =
+  /^(procedimiento|t[ií]tulo|nombre|documento)\s*:\s*(.+)$/i;
+
+/**
+ * Algunos formatos escriben el título con un prefijo ("Procedimiento: ...") y
+ * lo continúan en la línea siguiente en minúsculas. Se toma literalmente: el
+ * usuario puede corregirlo en el formulario.
+ */
+function findPrefixedTitle(lines: string[], headerIndex: number): string | null {
+  for (let index = 0; index < headerIndex; index += 1) {
+    const match = TITLE_PREFIX.exec(lines[index]);
+    if (!match) continue;
+
+    let title = match[2].trim();
+    for (let next = index + 1; next < headerIndex; next += 1) {
+      const line = lines[next];
+      if (!/^[a-záéíóúñü]/.test(line)) break;
+      if (HEADER_LABEL.test(line)) break;
+      if (IGNORED_TITLE_PATTERNS.some((pattern) => pattern.test(line))) break;
+      title = `${title} ${line}`.trim();
+    }
+
+    return title.length > 0 ? title : null;
+  }
+  return null;
+}
+
 /**
  * El título del formato vive en la celda central, antes de las etiquetas de
  * metadatos. Solo se consideran esas líneas: buscar en todo el documento
@@ -89,6 +116,9 @@ const DATE_VALUE =
 function findTitle(lines: string[]): string | null {
   const headerIndex = lines.findIndex((line) => HEADER_LABEL.test(line));
   if (headerIndex < 0) return null;
+
+  const prefixed = findPrefixedTitle(lines, headerIndex);
+  if (prefixed) return prefixed;
 
   let best: string | null = null;
   for (const line of lines.slice(0, headerIndex)) {
@@ -114,15 +144,15 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
   const text = normalizeHeaderText(pages[0] ?? '');
   const lines = text.split('\n').filter(Boolean);
 
+  // El código se toma tal como aparece en el documento, incluso si queda
+  // incompleto para el patrón habitual (por ejemplo "GIMSGP-").
   const code = new RegExp(
-    `\\bc[óo]digo\\b${SEPARATOR}([A-Z]{2,}[A-Z0-9]*(?:[-–][A-Z0-9]+)+)`,
+    `\\bc[óo]digo\\b${SEPARATOR}([A-Z0-9]{2,}(?:[-–][A-Z0-9.]*)+)`,
     'i',
-  )
-    .exec(text)?.[1]
-    ?.toUpperCase();
+  ).exec(text)?.[1];
 
   const version = new RegExp(
-    `\\bversi[óo]n\\b${SEPARATOR}(\\d{1,3})\\b`,
+    `\\bversi[óo]n\\b${SEPARATOR}(\\d{1,3}(?:\\.\\d{1,3})*)`,
     'i',
   ).exec(text)?.[1];
 
@@ -138,7 +168,8 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
   const pageMatch = /\bp[áa]gina\b[^0-9]{0,16}\d+[^0-9]{0,16}(\d+)/i.exec(text);
 
   return {
-    title: findTitle(lines),
+    // Los títulos de los documentos se registran en mayúsculas.
+    title: findTitle(lines)?.toUpperCase() ?? null,
     code: code ?? null,
     version: version ?? null,
     elaborationDate: elaborationRaw ? toIsoDate(elaborationRaw) : null,
