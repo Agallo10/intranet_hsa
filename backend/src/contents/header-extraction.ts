@@ -24,7 +24,7 @@ const MONTHS: Record<string, string> = {
 };
 
 const HEADER_LABEL =
-  /\b(c[óo]digo|versi[óo]n|fecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n)|p[áa]gina)\b/i;
+  /\b(c[óo]digo|versi[óo]n|fecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n)|p[áa]gina|hoja)\b/i;
 
 const IGNORED_TITLE_PATTERNS = [
   /hospital/i,
@@ -55,7 +55,7 @@ export function normalizeHeaderText(raw: string): string {
 }
 
 function toIsoDate(value: string): string | null {
-  const spanish = /(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+de\s+(\d{4})/i.exec(value);
+  const spanish = /(\d{1,2})\s+de\s+([a-záéíóúñ]+)\s+(?:de\s+)?(\d{4})/i.exec(value);
   if (spanish) {
     const month = MONTHS[spanish[2].toLowerCase()];
     if (!month) return null;
@@ -79,7 +79,7 @@ function toIsoDate(value: string): string | null {
 // espacios, pero no por otro texto con contenido.
 const SEPARATOR = '[^A-Za-z0-9]{0,32}';
 const DATE_VALUE =
-  '(\\d{1,2}\\s+de\\s+[a-záéíóúñ]+\\s+de\\s+\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{4}-\\d{2}-\\d{2})';
+  '(\\d{1,2}\\s+de\\s+[a-záéíóúñ]+\\s+(?:de\\s+)?\\d{4}|\\d{1,2}/\\d{1,2}/\\d{4}|\\d{4}-\\d{2}-\\d{2})';
 
 const TITLE_PREFIX =
   /^(procedimiento|t[ií]tulo|nombre|documento)\s*:\s*(.+)$/i;
@@ -113,6 +113,16 @@ function findPrefixedTitle(lines: string[], headerIndex: number): string | null 
  * metadatos. Solo se consideran esas líneas: buscar en todo el documento
  * tomaría encabezados de secciones posteriores como si fueran el título.
  */
+function isUppercaseTitleLine(line: string): boolean {
+  if (line.length < 4 || line.length > 120) return false;
+  if (IGNORED_TITLE_PATTERNS.some((pattern) => pattern.test(line))) return false;
+
+  const letters = line.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g, '');
+  if (letters.length < 4) return false;
+  const uppercase = letters.replace(/[^A-ZÁÉÍÓÚÑÜ]/g, '');
+  return uppercase.length / letters.length >= 0.8;
+}
+
 function findTitle(lines: string[]): string | null {
   const headerIndex = lines.findIndex((line) => HEADER_LABEL.test(line));
   if (headerIndex < 0) return null;
@@ -120,22 +130,65 @@ function findTitle(lines: string[]): string | null {
   const prefixed = findPrefixedTitle(lines, headerIndex);
   if (prefixed) return prefixed;
 
+  // El título puede ocupar varias líneas consecutivas en mayúsculas.
   let best: string | null = null;
-  for (const line of lines.slice(0, headerIndex)) {
-    const value = line.replace(/[|]+/g, ' ').trim();
-    if (value.length < 4 || value.length > 120) continue;
-    if (IGNORED_TITLE_PATTERNS.some((pattern) => pattern.test(value))) continue;
+  let current: string[] = [];
+  const flush = () => {
+    const joined = current.join(' ').trim();
+    if (joined.length > 0 && (!best || joined.length > best.length)) {
+      best = joined;
+    }
+    current = [];
+  };
 
-    const letters = value.replace(/[^A-Za-zÁÉÍÓÚÑÜáéíóúñü]/g, '');
-    if (letters.length < 4) continue;
-    const uppercase = letters.replace(/[^A-ZÁÉÍÓÚÑÜ]/g, '');
-    if (uppercase.length / letters.length < 0.8) continue;
-
-    if (!best || value.length > best.length) {
-      best = value;
+  for (const raw of lines.slice(0, headerIndex)) {
+    const value = raw.replace(/[|]+/g, ' ').trim();
+    if (isUppercaseTitleLine(value)) {
+      current.push(value);
+    } else {
+      flush();
     }
   }
+  flush();
+
   return best;
+}
+
+// Palabras que pueden seguir a "CÓDIGO:" cuando el valor falta; no son códigos.
+const CODE_STOPWORDS = /^(fecha|versi[óo]n|p[áa]gina|hoja|nit|tel|email|correo)$/i;
+
+/**
+ * El código se toma literal, aunque quede incompleto ("GIMSGP-") o venga sin
+ * guiones ("PROMMS"). Si no hay un valor reconocible, devuelve null.
+ */
+function extractCode(text: string): string | null {
+  const label = /\bc[óo]digo\b/i.exec(text);
+  if (!label) return null;
+
+  const start = label.index + label[0].length;
+  const window = text.slice(start, start + 80);
+  const match = new RegExp(`^${SEPARATOR}([A-Z0-9]{2,}(?:[-–][A-Z0-9.]*)*)`).exec(
+    window,
+  );
+  const code = match?.[1];
+  if (!code || CODE_STOPWORDS.test(code)) return null;
+  if (code.length < 3 && !/[0-9\-–]/.test(code)) return null;
+  return code;
+}
+
+/**
+ * Busca una única fecha dentro del bloque de encabezado que sigue a una
+ * etiqueta. Se corta en el marcador de página o el inicio del contenido para
+ * no tomar fechas del cuerpo del documento.
+ */
+function findDateInHeaderBlock(text: string, fromIndex: number): string | null {
+  const rest = text.slice(fromIndex, fromIndex + 200);
+  const stop = /\b(p[áa]gina|hoja|introducci[óo]n|contenido|objetivo)\b/i.exec(
+    rest,
+  );
+  const block = stop ? rest.slice(0, stop.index) : rest;
+  const dates = [...new Set(block.match(new RegExp(DATE_VALUE, 'gi')) ?? [])];
+  return dates.length === 1 ? dates[0] : null;
 }
 
 export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
@@ -144,12 +197,7 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
   const text = normalizeHeaderText(pages[0] ?? '');
   const lines = text.split('\n').filter(Boolean);
 
-  // El código se toma tal como aparece en el documento, incluso si queda
-  // incompleto para el patrón habitual (por ejemplo "GIMSGP-").
-  const code = new RegExp(
-    `\\bc[óo]digo\\b${SEPARATOR}([A-Z0-9]{2,}(?:[-–][A-Z0-9.]*)+)`,
-    'i',
-  ).exec(text)?.[1];
+  const code = extractCode(text);
 
   const version = new RegExp(
     `\\bversi[óo]n\\b${SEPARATOR}(\\d{1,3}(?:\\.\\d{1,3})*)`,
@@ -160,12 +208,24 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
     `\\bfecha\\s+de\\s+elaboraci[óo]n\\b${SEPARATOR}${DATE_VALUE}`,
     'i',
   ).exec(text)?.[1];
-  const updateRaw = new RegExp(
+  const updateLabel = /\bfecha\s+(?:de\s+)?actualizaci[óo]n\b/i.exec(text);
+  let updateRaw = new RegExp(
     `\\bfecha\\s+(?:de\\s+)?actualizaci[óo]n\\b${SEPARATOR}${DATE_VALUE}`,
     'i',
   ).exec(text)?.[1];
 
-  const pageMatch = /\bp[áa]gina\b[^0-9]{0,16}\d+[^0-9]{0,16}(\d+)/i.exec(text);
+  // En algunas plantillas el valor de la fecha de actualización queda después
+  // de la versión. Se busca una única fecha dentro del bloque de encabezado,
+  // deteniéndose en el marcador de página o el inicio del contenido.
+  if (!updateRaw && updateLabel) {
+    updateRaw =
+      findDateInHeaderBlock(
+        text,
+        updateLabel.index + updateLabel[0].length,
+      ) ?? undefined;
+  }
+
+  const pageMatch = /\b(?:p[áa]gina|hoja)\b[^0-9]{0,16}\d+[^0-9]{0,16}(\d+)/i.exec(text);
 
   return {
     // Los títulos de los documentos se registran en mayúsculas.

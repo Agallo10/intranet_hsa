@@ -95,6 +95,44 @@ describe('parseDocumentHeader', () => {
     });
   });
 
+  it('une títulos de varias líneas en mayúsculas', () => {
+    const page = [
+      'NIT: 800179870-2',
+      'PROTOCOLO VIGILANCIA',
+      'EPIDEMIOLOGICA',
+      'EVENTOS EN SALUD PUBLICA 2026',
+      'CÓDIGO:',
+      'PROMMS',
+      'GP',
+      'FECHA DE',
+      'ELABORACIÓN:',
+      '10 de enero 2026',
+      'FECHA',
+      'ACTUALIZACIÓN:',
+      'VERSIÓN:',
+      '02',
+      '10 de enero 2026',
+      'HOJA: 1 DE: 12',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title: 'PROTOCOLO VIGILANCIA EPIDEMIOLOGICA EVENTOS EN SALUD PUBLICA 2026',
+      code: 'PROMMS',
+      version: '02',
+      elaborationDate: '2026-01-10',
+      updateDate: '2026-01-10',
+      pageCount: 12,
+    });
+  });
+
+  it('no toma como código una etiqueta de metadatos', () => {
+    const page = ['CÓDIGO:', 'FECHA DE ELABORACIÓN:', '10 de enero 2026'].join(
+      '\n',
+    );
+
+    expect(parseDocumentHeader([page]).code).toBeNull();
+  });
+
   it('no continúa el título con líneas que empiezan en mayúscula', () => {
     const page = [
       'Título: Plan de contingencia',
