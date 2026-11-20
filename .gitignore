@@ -25,6 +25,9 @@ npm-debug.log*
 # Spec Kit agent artifacts
 .opencode/
 
+# Índice local de skills del asistente (rutas de la máquina)
+.atl/
+
 # Coverage
 coverage/
 
