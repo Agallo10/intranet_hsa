@@ -315,6 +315,65 @@ describe('parseDocumentHeader', () => {
     );
   });
 
+  it('ignora el marcador de página del inicio y no lo toma como páginas', () => {
+    const page = [
+      'Página | 1',
+      'NIT: 800179870-2',
+      'PROTOCOLO DE REPORTES',
+      'DE LABORATORIOS',
+      'PRIORITARIOS DE',
+      'GESTANTES MME',
+      'CÓDIGO:',
+      'MLAB-01',
+      'FECHA DE',
+      'ELABORACIÓN:',
+      'Diciembre 2025',
+      'VERSIÓN:',
+      '01',
+      'HOJA: 1 DE: 5',
+    ].join('\n');
+
+    const fields = parseDocumentHeader([page]);
+    expect(fields.title).toBe(
+      'PROTOCOLO DE REPORTES DE LABORATORIOS PRIORITARIOS DE GESTANTES MME',
+    );
+    expect(fields.pageCount).toBe(5);
+  });
+
+  it('reconoce la etiqueta "CÓD IGO" partida con espacio', () => {
+    const page = [
+      'MANUAL DE',
+      'PROCEDIMIENTOS DE',
+      'REACTIVOVIGILANCIA',
+      'CÓD IGO:',
+      'PROMLAB-02',
+      'VERSIÓN:',
+      '03',
+      'HOJA: 1 DE: 23',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toMatchObject({
+      title: 'MANUAL DE PROCEDIMIENTOS DE REACTIVOVIGILANCIA',
+      code: 'PROMLAB-02',
+      version: '03',
+      pageCount: 23,
+    });
+  });
+
+  it('no corta el título cuando menciona "FECHA DE VENCIMIENTO"', () => {
+    const page = [
+      'PROCEDIMIENTO PARA CONTROL DE',
+      'FECHA DE VENCIMIENTO DE REACTIVOS,',
+      'INSUMOS Y HEMOCOMPONENTES',
+      'CÓDIGO:',
+      'PROMLAB-48',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe(
+      'PROCEDIMIENTO PARA CONTROL DE FECHA DE VENCIMIENTO DE REACTIVOS, INSUMOS Y HEMOCOMPONENTES',
+    );
+  });
+
   it('no toma como código una etiqueta de metadatos', () => {
     const page = ['CÓDIGO:', 'FECHA DE ELABORACIÓN:', '10 de enero 2026'].join(
       '\n',

@@ -23,8 +23,10 @@ const MONTHS: Record<string, string> = {
   diciembre: '12',
 };
 
+const METADATA_LABEL =
+  /\b(c[óo]d\s*igo|versi[óo]n|fecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n))\b/i;
 const HEADER_LABEL =
-  /\b(c[óo]digo|versi[óo]n|fecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n)|p[áa]gina|hoja)\b/i;
+  /\b(c[óo]d\s*igo|versi[óo]n|fecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n)|p[áa]gina|hoja)\b/i;
 
 // Se descartan las líneas que son datos de la entidad (empiezan con ellos),
 // no las que simplemente los mencionan dentro del título.
@@ -41,9 +43,9 @@ const IGNORED_TITLE_PATTERNS = [
   /^en\s+los\s+servicios\b/i,
   /^p[áa]gina\b/i,
   /^hoja\b/i,
-  /\bc[óo]digo\b/i,
+  /\bc[óo]d\s*igo\b/i,
   /\bversi[óo]n\b/i,
-  /\bfecha\b/i,
+  /\bfecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n)\b/i,
   /^\d+$/,
 ];
 
@@ -195,7 +197,7 @@ function longestRun(
 }
 
 function findTitle(lines: string[]): string | null {
-  const headerIndex = lines.findIndex((line) => HEADER_LABEL.test(line));
+  const headerIndex = lines.findIndex((line) => METADATA_LABEL.test(line));
   if (headerIndex < 0) return null;
 
   const prefixed = findPrefixedTitle(lines, headerIndex);
@@ -223,7 +225,7 @@ const CODE_STOPWORDS = /^(fecha|versi[óo]n|p[áa]gina|hoja|nit|tel|email|correo
  * guiones ("PROMMS"). Si no hay un valor reconocible, devuelve null.
  */
 function extractCode(text: string): string | null {
-  const label = /\bc[óo]digo\b/i.exec(text);
+  const label = /\bc[óo]d\s*igo\b/i.exec(text);
   if (!label) return null;
 
   const start = label.index + label[0].length;
@@ -374,7 +376,7 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
       ) ?? undefined;
   }
 
-  const pageMatch = /\b(?:p[áa]gina|hoja)\b[^0-9]{0,16}\d+[^0-9]{0,16}(\d+)/i.exec(text);
+  const pageMatch = /\b(?:p[áa]gina|hoja)\b\s*[:-]?\s*(\d{1,4})\s*(?:de|\/)\s*:?\s*(\d{1,4})/i.exec(text);
 
   const rawTitle = findTitle(lines);
 
@@ -385,6 +387,6 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
     version: version ?? null,
     elaborationDate: elaborationRaw ? toIsoDate(elaborationRaw) : null,
     updateDate: updateRaw ? toIsoDate(updateRaw) : null,
-    pageCount: pageMatch ? Number(pageMatch[1]) : null,
+    pageCount: pageMatch ? Number(pageMatch[2]) : null,
   };
 }
