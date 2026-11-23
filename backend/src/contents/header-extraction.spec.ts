@@ -237,6 +237,84 @@ describe('parseDocumentHeader', () => {
     expect(parseDocumentHeader([page]).elaborationDate).toBeNull();
   });
 
+  it('no confunde palabras con "E.S.E" y une palabras cortadas con guion', () => {
+    const page = [
+      'NIT: 800179870-2',
+      'PROTOCOLO DE SEROTECA DEL',
+      'SERVICIO DE GESTION PRE-',
+      'TRANSFUSIONAL',
+      'CÓDIGO:',
+      'PRTMLAB-68',
+      'FECHA DE ELABORACIÓN:',
+      '13 -marzo -2026',
+      'VERSIÓN:',
+      '1.0',
+      'FECHA ACTUALIZACIÓN:',
+      'HOJA: 1 DE: 5',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title:
+        'PROTOCOLO DE SEROTECA DEL SERVICIO DE GESTION PRE-TRANSFUSIONAL',
+      code: 'PRTMLAB-68',
+      version: '1.0',
+      elaborationDate: '2026-03-13',
+      updateDate: null,
+      pageCount: 5,
+    });
+  });
+
+  it('conserva en el título las líneas que mencionan a la entidad', () => {
+    const page = [
+      'PROTOCOLO DE PRESTAMO DE',
+      'HEMOCOMPONENTES DE LA',
+      'INSTITUCION HOSPITAL SAN ANDRES A',
+      'IPS PUENTE DEL MEDIO.',
+      'CÓDIGO:',
+      'PRTMLAB-446-39',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe(
+      'PROTOCOLO DE PRESTAMO DE HEMOCOMPONENTES DE LA INSTITUCION HOSPITAL SAN ANDRES A IPS PUENTE DEL MEDIO.',
+    );
+  });
+
+  it('completa el código cuando se corta al final de una línea', () => {
+    const page = ['CÓDIGO:', 'GIMLAB-446-', '43', 'FECHA DE ELABORACIÓN:'].join(
+      '\n',
+    );
+
+    expect(parseDocumentHeader([page]).code).toBe('GIMLAB-446-43');
+  });
+
+  it('corta el título antes del subtítulo "EN LOS SERVICIOS..."', () => {
+    const page = [
+      'GUÍA CLÍNICA DE MANEJO DE INFECCIONES DE PIEL Y TEJIDOS',
+      'BLANDOS (IPTB)',
+      'EN LOS SERVICIOS ASISTENCIALES EN EL HOSPITAL SAN ANDRÉS E.S.E',
+      'CÓDIGO:',
+      'GI-SGP-23',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe(
+      'GUÍA CLÍNICA DE MANEJO DE INFECCIONES DE PIEL Y TEJIDOS BLANDOS (IPTB)',
+    );
+  });
+
+  it('recorta el subtítulo fijo aunque venga en la misma línea', () => {
+    const page = [
+      'GUÍA CLINICA DE INTERRUPCIÓN VOLUNTARIA DEL EMBARAZO (IVE) EN',
+      'LOS SERVICIOS ASISTENCIALES EN EL HOSPITAL SAN ANDRÉS E.S.E',
+      'PARA LA VIGENCIA 2025',
+      'CÓDIGO:',
+      'GIMSGP-25',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe(
+      'GUÍA CLINICA DE INTERRUPCIÓN VOLUNTARIA DEL EMBARAZO (IVE)',
+    );
+  });
+
   it('no toma como código una etiqueta de metadatos', () => {
     const page = ['CÓDIGO:', 'FECHA DE ELABORACIÓN:', '10 de enero 2026'].join(
       '\n',

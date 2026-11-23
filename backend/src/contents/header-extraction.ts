@@ -26,13 +26,21 @@ const MONTHS: Record<string, string> = {
 const HEADER_LABEL =
   /\b(c[óo]digo|versi[óo]n|fecha\s+(?:de\s+)?(?:elaboraci[óo]n|actualizaci[óo]n)|p[áa]gina|hoja)\b/i;
 
+// Se descartan las líneas que son datos de la entidad (empiezan con ellos),
+// no las que simplemente los mencionan dentro del título.
 const IGNORED_TITLE_PATTERNS = [
-  /hospital/i,
-  /e\.?\s?s\.?\s?e\.?/i,
-  /\bnit\b/i,
-  /\btumaco\b/i,
-  /\bnari[ñn]o\b/i,
+  /^hospital\b/i,
+  /^e\.?\s?s\.?\s?e\.?(?=\s|$)/i,
+  /^nit\b/i,
+  /^tumaco\b/i,
+  /^nari[ñn]o\b/i,
+  /^san\s+andr/i,
+  /^municipio\s+de\b/i,
+  /^departamento\s+de\b/i,
+  /^secretar[ií]a\b/i,
+  /^en\s+los\s+servicios\b/i,
   /^p[áa]gina\b/i,
+  /^hoja\b/i,
   /\bc[óo]digo\b/i,
   /\bversi[óo]n\b/i,
   /\bfecha\b/i,
@@ -161,7 +169,13 @@ function longestRun(
   let current: string[] = [];
 
   const flush = () => {
-    const joined = current.join(' ').trim();
+    // Si una línea corta una palabra con guion ("PRE-"), se une sin espacio.
+    const joined = current
+      .reduce((acc, part) => {
+        if (!acc) return part;
+        return acc.endsWith('-') ? `${acc}${part}` : `${acc} ${part}`;
+      }, '')
+      .trim();
     if (joined.length > 0 && (!best || joined.length > best.length)) {
       best = joined;
     }
@@ -219,7 +233,9 @@ function extractCode(text: string): string | null {
   );
   const code = match?.[1];
   if (code && !CODE_STOPWORDS.test(code)) {
-    if (code.length >= 3 || /[0-9\-–]/.test(code)) return code;
+    if (code.length >= 3 || /[0-9\-–]/.test(code)) {
+      return completeCode(code, text, start + match[0].length);
+    }
   }
 
   // Plantillas con columnas: el valor puede quedar después de otra etiqueta
@@ -292,6 +308,31 @@ function extractVersion(text: string): string | null {
   return null;
 }
 
+/**
+ * Algunos códigos se cortan al final de una línea ("GIMLAB-446-" / "43").
+ * Si el código termina en guion, se completa con el token inmediato siguiente
+ * cuando tiene forma de continuación.
+ */
+function completeCode(code: string, text: string, afterIndex: number): string {
+  if (!/[-–]$/.test(code)) return code;
+  const next = /^\s*\n\s*([A-Z0-9.]{1,6})\s*(?:\n|$)/.exec(
+    text.slice(afterIndex),
+  )?.[1];
+  return next ? `${code}${next}` : code;
+}
+
+/**
+ * Algunas plantillas agregan al título un subtítulo fijo ("EN LOS SERVICIOS
+ * ASISTENCIALES EN EL HOSPITAL ...", "PARA LA VIGENCIA 2025"). Se recorta para
+ * dejar el título del documento.
+ */
+function trimTitleBoilerplate(title: string): string {
+  return title
+    .replace(/\s+EN\s+LOS\s+SERVICIOS\s+ASISTENCIALES\b.*$/i, '')
+    .replace(/\s+PARA\s+LA\s+VIGENCIA\s+\d{4}\s*$/i, '')
+    .trim();
+}
+
 export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
   // El encabezado normalizado de los formatos del hospital está en la primera
   // página; usar el resto del documento solo aportaría texto de cuerpo.
@@ -335,9 +376,11 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
 
   const pageMatch = /\b(?:p[áa]gina|hoja)\b[^0-9]{0,16}\d+[^0-9]{0,16}(\d+)/i.exec(text);
 
+  const rawTitle = findTitle(lines);
+
   return {
     // Los títulos de los documentos se registran en mayúsculas.
-    title: findTitle(lines)?.toUpperCase() ?? null,
+    title: rawTitle ? trimTitleBoilerplate(rawTitle).toUpperCase() : null,
     code: code ?? null,
     version: version ?? null,
     elaborationDate: elaborationRaw ? toIsoDate(elaborationRaw) : null,
