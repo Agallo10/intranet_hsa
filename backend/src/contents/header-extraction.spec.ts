@@ -22,7 +22,7 @@ describe('parseDocumentHeader', () => {
     expect(parseDocumentHeader([SAMPLE_HEADER, 'Segunda página'])).toEqual({
       title: 'PLAN DE CONTINGENCIA',
       code: 'PLASG-SST-06',
-      version: '03',
+      version: '3.0',
       elaborationDate: '2018-01-26',
       updateDate: '2025-07-24',
       pageCount: 37,
@@ -40,7 +40,7 @@ describe('parseDocumentHeader', () => {
 
     const fields = parseDocumentHeader([page]);
     expect(fields.code).toBe('PLASG-SST-06');
-    expect(fields.version).toBe('03');
+    expect(fields.version).toBe('3.0');
     expect(fields.elaborationDate).toBe('2018-01-26');
     expect(fields.updateDate).toBe('2025-07-24');
     expect(fields.pageCount).toBe(37);
@@ -56,7 +56,7 @@ describe('parseDocumentHeader', () => {
 
     const fields = parseDocumentHeader([page]);
     expect(fields.code).toBe('PL-01');
-    expect(fields.version).toBe('2');
+    expect(fields.version).toBe('2.0');
     expect(fields.elaborationDate).toBe('2021-03-05');
     expect(fields.updateDate).toBe('2024-12-31');
   });
@@ -118,7 +118,7 @@ describe('parseDocumentHeader', () => {
     expect(parseDocumentHeader([page])).toEqual({
       title: 'PROTOCOLO VIGILANCIA EPIDEMIOLOGICA EVENTOS EN SALUD PUBLICA 2026',
       code: 'PROMMS',
-      version: '02',
+      version: '2.0',
       elaborationDate: '2026-01-10',
       updateDate: '2026-01-10',
       pageCount: 12,
@@ -355,7 +355,7 @@ describe('parseDocumentHeader', () => {
     expect(parseDocumentHeader([page])).toMatchObject({
       title: 'MANUAL DE PROCEDIMIENTOS DE REACTIVOVIGILANCIA',
       code: 'PROMLAB-02',
-      version: '03',
+      version: '3.0',
       pageCount: 23,
     });
   });
@@ -372,6 +372,20 @@ describe('parseDocumentHeader', () => {
     expect(parseDocumentHeader([page]).title).toBe(
       'PROCEDIMIENTO PARA CONTROL DE FECHA DE VENCIMIENTO DE REACTIVOS, INSUMOS Y HEMOCOMPONENTES',
     );
+  });
+
+  it('normaliza las versiones enteras a formato decimal', () => {
+    const entera = parseDocumentHeader(['VERSIÓN:\n03']);
+    expect(entera.version).toBe('3.0');
+
+    const sinCero = parseDocumentHeader(['VERSIÓN: 01']);
+    expect(sinCero.version).toBe('1.0');
+
+    const decimal = parseDocumentHeader(['VERSIÓN:\n1.0']);
+    expect(decimal.version).toBe('1.0');
+
+    const decimalConMinor = parseDocumentHeader(['VERSIÓN:\n2.1']);
+    expect(decimalConMinor.version).toBe('2.1');
   });
 
   it('no toma como código una etiqueta de metadatos', () => {

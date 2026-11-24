@@ -74,7 +74,7 @@ describe('ContentsService.extractHeaderMetadata', () => {
       supported: true,
       title: 'PLAN DE CONTINGENCIA',
       code: 'PLASG-SST-06',
-      version: '03',
+      version: '3.0',
       elaborationDate: '2018-01-26',
       updateDate: '2025-07-24',
       pageCount: 37,

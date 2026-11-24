@@ -305,9 +305,18 @@ function extractVersion(text: string): string | null {
       match.index + match[0].length + 6,
     );
     if (/^\s+de(?:l)?\s/i.test(after)) continue;
-    return match[0];
+    return formatVersion(match[0]);
   }
   return null;
+}
+
+/**
+ * Las versiones enteras ("03", "01") se muestran con decimal ("3.0", "1.0").
+ * Las que ya vienen con punto ("1.0", "2.1") se dejan tal cual.
+ */
+export function formatVersion(value: string): string {
+  if (!/^\d+$/.test(value)) return value;
+  return `${Number(value)}.0`;
 }
 
 /**
