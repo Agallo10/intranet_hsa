@@ -61,6 +61,19 @@ export type ContentHeaderExtraction = {
   message: string | null
 }
 
+export type DocumentTableColumn =
+  | 'title'
+  | 'code'
+  | 'type'
+  | 'version'
+  | 'area'
+  | 'category'
+  | 'date'
+
+export type DocumentTableConfigDto = {
+  columns: DocumentTableColumn[]
+}
+
 export type NewsCategoryDto = {
   id: string
   name: string

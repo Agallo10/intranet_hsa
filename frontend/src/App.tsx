@@ -17,6 +17,7 @@ import { Categories } from './pages/admin/Categories'
 import { CategoriasNoticias } from './pages/admin/CategoriasNoticias'
 import { Areas } from './pages/admin/Areas'
 import { Auditoria } from './pages/admin/Auditoria'
+import { TablaDocumentos } from './pages/admin/TablaDocumentos'
 
 export default function App() {
   return (
@@ -50,6 +51,7 @@ export default function App() {
             <Route path="admin/categorias" element={<Categories />} />
             <Route path="admin/areas" element={<Areas />} />
             <Route path="admin/categorias-noticias" element={<CategoriasNoticias />} />
+            <Route path="admin/tabla-documentos" element={<TablaDocumentos />} />
             <Route path="admin/auditoria" element={<Auditoria />} />
           </Route>
         </Route>

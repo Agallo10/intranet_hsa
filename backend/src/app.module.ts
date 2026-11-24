@@ -12,6 +12,7 @@ import { CoursesModule } from './courses/courses.module.js';
 import { NewsModule } from './news/news.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { ChatModule } from './chat/chat.module.js';
+import { SettingsModule } from './settings/settings.module.js';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard.js';
 import { RolesGuard } from './common/guards/roles.guard.js';
 
@@ -43,6 +44,7 @@ import { RolesGuard } from './common/guards/roles.guard.js';
     NewsModule,
     AuditModule,
     ChatModule,
+    SettingsModule,
   ],
   controllers: [AppController],
   providers: [

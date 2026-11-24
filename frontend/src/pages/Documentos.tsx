@@ -10,6 +10,8 @@ import type {
   CategoryDto,
   ContentDto,
   ContentHeaderExtraction,
+  DocumentTableColumn,
+  DocumentTableConfigDto,
   ListResponse,
 } from '../lib/types'
 import { documentSchema, type DocumentValues } from '../lib/validations'
@@ -86,6 +88,17 @@ export function Documentos() {
     },
   })
 
+  const tableConfigQuery = useQuery({
+    queryKey: ['settings', 'document-table'],
+    queryFn: async () => {
+      const res = await api.get<DocumentTableConfigDto>(
+        '/settings/document-table',
+      )
+      return res.data
+    },
+    staleTime: 60_000,
+  })
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       await api.delete(`/contents/${id}`)
@@ -114,6 +127,7 @@ export function Documentos() {
 
   const columns: LegacyColumnDef<ContentDto>[] = [
     {
+      id: 'title',
       accessorKey: 'title',
       header: 'Documento',
       cell: ({ row }) => (
@@ -128,27 +142,37 @@ export function Documentos() {
       ),
     },
     {
+      id: 'code',
       accessorKey: 'code',
       header: 'Código',
       cell: ({ row }) => row.original.code ?? '—',
     },
     {
+      id: 'type',
       accessorFn: (row) => fileTypeLabel(row.mimeType),
       header: 'Tipo',
       cell: ({ row }) => fileTypeLabel(row.original.mimeType),
     },
     {
+      id: 'version',
       accessorKey: 'version',
       header: 'Versión',
       cell: ({ row }) => row.original.version ?? '—',
     },
     {
+      id: 'area',
+      accessorFn: (row) => row.area?.name ?? '',
+      header: 'Área',
+      cell: ({ row }) => row.original.area?.name ?? '—',
+    },
+    {
+      id: 'category',
       accessorFn: (row) => row.category?.name ?? '',
       header: 'Categoría',
       cell: ({ row }) => row.original.category?.name ?? '—',
     },
     {
-      id: 'fecha',
+      id: 'date',
       header: 'Fecha',
       accessorFn: (row) => row.updateDate ?? row.elaborationDate ?? '',
       cell: ({ row }) => {
@@ -212,6 +236,25 @@ export function Documentos() {
     },
   ]
 
+  const configuredColumns =
+    tableConfigQuery.data?.columns ??
+    ([
+      'title',
+      'code',
+      'type',
+      'version',
+      'area',
+      'category',
+      'date',
+    ] as DocumentTableColumn[])
+
+  const visibleColumns = columns.filter(
+    (column) =>
+      column.id === 'actions' ||
+      configuredColumns.includes(column.id as DocumentTableColumn),
+  )
+  const showTitle = configuredColumns.includes('title')
+
   return (
     <div>
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -230,11 +273,11 @@ export function Documentos() {
       </div>
 
       <DataTable
-        columns={columns}
+        columns={visibleColumns}
         data={documentsQuery.data ?? []}
         searchPlaceholder="Buscar documento..."
         emptyMessage="No hay documentos"
-        initialSorting={[{ id: 'title', desc: false }]}
+        initialSorting={showTitle ? [{ id: 'title', desc: false }] : []}
       />
 
       {canPublish && (

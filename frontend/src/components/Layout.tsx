@@ -7,6 +7,7 @@ import {
   Users,
   Tags,
   History,
+  TableProperties,
   MessageSquare,
   Building2,
   ChevronDown,
@@ -200,6 +201,15 @@ export function Layout() {
                   </NavLink>
                 </div>
               )}
+
+              <NavLink
+                to="/admin/tabla-documentos"
+                className={navClass}
+                title={collapsed ? 'Tabla de documentos' : undefined}
+              >
+                <TableProperties className="size-4 shrink-0" />
+                {!collapsed && <span>Tabla de documentos</span>}
+              </NavLink>
 
               <NavLink
                 to="/admin/auditoria"
