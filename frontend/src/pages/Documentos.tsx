@@ -2,7 +2,16 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Download, Eye, FileText, Pencil, Plus, Trash2, Upload } from 'lucide-react'
+import {
+  Download,
+  Eye,
+  FileText,
+  Layers,
+  Pencil,
+  Plus,
+  Trash2,
+  Upload,
+} from 'lucide-react'
 import { api, getErrorMessage } from '../lib/api'
 import { authedUrl } from '../lib/token'
 import type {
@@ -18,6 +27,7 @@ import { documentSchema, type DocumentValues } from '../lib/validations'
 import { useAuth } from '../features/auth/AuthContext'
 import { DataTable } from '../components/data-table/data-table'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { BulkUploadDialog } from '../components/BulkUploadDialog'
 import type { LegacyColumnDef } from '@tanstack/react-table/legacy'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -75,6 +85,7 @@ export function Documentos() {
     user?.role === 'gestor_documental'
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
+  const [bulkOpen, setBulkOpen] = useState(false)
   const [editing, setEditing] = useState<ContentDto | null>(null)
   const [previewing, setPreviewing] = useState<ContentDto | null>(null)
 
@@ -265,10 +276,16 @@ export function Documentos() {
           </p>
         </div>
         {canPublish && (
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="size-4" />
-            Subir documento
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <Layers className="size-4" />
+              Carga masiva
+            </Button>
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="size-4" />
+              Subir documento
+            </Button>
+          </div>
         )}
       </div>
 
@@ -279,6 +296,16 @@ export function Documentos() {
         emptyMessage="No hay documentos"
         initialSorting={showTitle ? [{ id: 'title', desc: false }] : []}
       />
+
+      {canPublish && (
+        <BulkUploadDialog
+          open={bulkOpen}
+          onOpenChange={setBulkOpen}
+          onUploaded={() =>
+            queryClient.invalidateQueries({ queryKey: ['contents', 'documents'] })
+          }
+        />
+      )}
 
       {canPublish && (
         <DocumentUploadDialog
