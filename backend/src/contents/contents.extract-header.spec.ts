@@ -4,6 +4,7 @@ import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import JSZip from 'jszip';
 import { ContentsService } from './contents.service.js';
 import { extractPdfText } from './pdf-text.js';
 import { CategoriesService } from '../categories/categories.service.js';
@@ -99,18 +100,69 @@ describe('ContentsService.extractHeaderMetadata', () => {
     await expect(stat(file.path)).rejects.toThrow();
   });
 
-  it('no intenta leer formatos que no son PDF y elimina el temporal', async () => {
+  it('no intenta leer formatos no soportados y elimina el temporal', async () => {
     const file = await uploadedFile(
-      'plan.docx',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'plan.xlsx',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       Buffer.from('PK\x03\x04'),
     );
 
     const result = await service.extractHeaderMetadata(file);
 
     expect(result.supported).toBe(false);
-    expect(result.message).toContain('solo está disponible para archivos PDF');
+    expect(result.message).toContain('PDF y Word');
     expect(mockedExtractPdfText).not.toHaveBeenCalled();
+    await expect(stat(file.path)).rejects.toThrow();
+  });
+
+  it('lee el encabezado de un Word (.docx) y borra el temporal', async () => {
+    const zip = new JSZip();
+    zip.file(
+      'word/document.xml',
+      [
+        '<w:document><w:body>',
+        '<w:p><w:r><w:t>PLAN DE CONTINGENCIA</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>CÓDIGO:</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>PLASG-SST-06</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>VERSIÓN:</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>03</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>FECHA DE ELABORACIÓN:</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>26 de enero de 2018</w:t></w:r></w:p>',
+        '<w:p><w:r><w:t>HOJA: 1 DE: 12</w:t></w:r></w:p>',
+        '</w:body></w:document>',
+      ].join(''),
+    );
+    const buffer = await zip.generateAsync({ type: 'nodebuffer' });
+    const file = await uploadedFile(
+      'plan.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      buffer,
+    );
+
+    const result = await service.extractHeaderMetadata(file);
+
+    expect(result).toMatchObject({
+      supported: true,
+      title: 'PLAN DE CONTINGENCIA',
+      code: 'PLASG-SST-06',
+      version: '3.0',
+      elaborationDate: '2018-01-26',
+      pageCount: 12,
+    });
+    expect(mockedExtractPdfText).not.toHaveBeenCalled();
+    await expect(stat(file.path)).rejects.toThrow();
+  });
+
+  it('informa un error legible si el Word está dañado', async () => {
+    const file = await uploadedFile(
+      'roto.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      Buffer.from('PK\x03\x04sin-documento'),
+    );
+
+    await expect(service.extractHeaderMetadata(file)).rejects.toThrow(
+      'No se pudo leer el archivo Word',
+    );
     await expect(stat(file.path)).rejects.toThrow();
   });
 

@@ -232,9 +232,18 @@ describe('parseDocumentHeader', () => {
     expect(monthFirst.elaborationDate).toBe('2025-04-01');
   });
 
-  it('deja la fecha vacía si el documento solo trae mes y año', () => {
+  it('completa el día 1 cuando la fecha solo trae mes y año', () => {
     const page = ['FECHA DE ELABORACIÓN:', 'julio del 2021'].join('\n');
-    expect(parseDocumentHeader([page]).elaborationDate).toBeNull();
+    expect(parseDocumentHeader([page]).elaborationDate).toBe('2021-07-01');
+  });
+
+  it('usa la etiqueta "FECHA:" como fecha de elaboración', () => {
+    const page = [
+      'CÓDIGO: VERSIÓN: 1 FECHA: DICIEMBRE',
+      '2020 Página : 1 de 4',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).elaborationDate).toBe('2020-12-01');
   });
 
   it('no confunde palabras con "E.S.E" y une palabras cortadas con guion', () => {
@@ -386,6 +395,52 @@ describe('parseDocumentHeader', () => {
 
     const decimalConMinor = parseDocumentHeader(['VERSIÓN:\n2.1']);
     expect(decimalConMinor.version).toBe('2.1');
+  });
+
+  it('ignora el bloque legal de la portada al buscar el título', () => {
+    const page = [
+      'GUIA ATENCIÓN',
+      'MATERNA POR',
+      'CICATRIZ UTERINA',
+      'DEBIDO A CIRUGÍA',
+      'PREVIA',
+      'HOSPITAL SAN ANDRES E.SE.',
+      'EN INTERVENCION',
+      'RESOLUCION No 000515 DEL 21 DE MARZO DE 2017',
+      'PRORROGADA POR LA RESOLUCION NUMERO 3947 DE 21 DE MARZO DE 2018',
+      'PRORROGA POR RESOLUCION EJECUTIVA No.117 DEL 14 DE SEPTIEMBRE',
+      '2020',
+      'TUMACO – NARIÑO',
+      'NIT: 800179870-2',
+      'CÓDIGO: VERSIÓN: 1 FECHA: DICIEMBRE',
+      '2020 Página : 1 de 4',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page])).toEqual({
+      title: 'GUIA ATENCIÓN MATERNA POR CICATRIZ UTERINA DEBIDO A CIRUGÍA PREVIA',
+      code: null,
+      version: '1.0',
+      elaborationDate: '2020-12-01',
+      updateDate: null,
+      pageCount: 4,
+    });
+  });
+
+  it('no toma como código el inicio de la palabra "VERSIÓN"', () => {
+    const page = ['CÓDIGO: VERSIÓN: 1 FECHA: DICIEMBRE', '2020'].join('\n');
+    expect(parseDocumentHeader([page]).code).toBeNull();
+  });
+
+  it('empieza el título en la primera palabra clave y descarta fragmentos previos', () => {
+    const page = [
+      'CTUBRE',
+      'GUÍA CLÍNICA PARA EL MANEJO DEL PACIENTE CON ALTERACIÓN EN LA SALUD MENTAL',
+      'CÓDIGO: GIMMSG',
+    ].join('\n');
+
+    expect(parseDocumentHeader([page]).title).toBe(
+      'GUÍA CLÍNICA PARA EL MANEJO DEL PACIENTE CON ALTERACIÓN EN LA SALUD MENTAL',
+    );
   });
 
   it('no toma como código una etiqueta de metadatos', () => {

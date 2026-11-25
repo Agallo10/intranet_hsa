@@ -41,6 +41,14 @@ const IGNORED_TITLE_PATTERNS = [
   /^departamento\s+de\b/i,
   /^secretar[ií]a\b/i,
   /^en\s+los\s+servicios\b/i,
+  /^en\s+intervenci[óo]n\b/i,
+  /^resoluci[óo]n\b/i,
+  /^prorrogad/i,
+  /^prorroga\b/i,
+  /^por\s+el\s+ministerio\b/i,
+  /^por\s+la\s+resoluci[óo]n\b/i,
+  /^el\s+ministerio\b/i,
+  /ministerio\s+de\s+salud/i,
   /^p[áa]gina\b/i,
   /^hoja\b/i,
   /\bc[óo]d\s*igo\b/i,
@@ -71,7 +79,7 @@ const YEAR = '\\d{4}';
 // Formatos de fecha observados en los documentos: "26 de enero de 2018",
 // "21 agosto 2026", "23 -septiembre -2025", "Abril 1 de 2025",
 // "05/03/2021" y "2024-12-31".
-const DATE_VALUE = `(?:${DAY}\\s*(?:de\\s+)?[-–]?\\s*${MONTH_WORD}\\s*(?:de(?:l)?\\s+)?[-–]?\\s*${YEAR}|${MONTH_WORD}\\s+${DAY}\\s+(?:de(?:l)?\\s+)?${YEAR}|${DAY}/${DAY}/${YEAR}|${YEAR}-${DAY}-${DAY})`;
+const DATE_VALUE = `(?:${DAY}[ \\t]*(?:de[ \\t]+)?[-–]?[ \\t]*${MONTH_WORD}[ \\t]*(?:de(?:l)?\\s+)?[-–]?[ \\t]*${YEAR}|${MONTH_WORD}[ \\t]+${DAY}[ \\t]+(?:de(?:l)?\\s+)?${YEAR}|${DAY}/${DAY}/${YEAR}|${YEAR}-${DAY}-${DAY}|${MONTH_WORD}\\s*(?:de(?:l)?\\s*)?${YEAR})`;
 
 function toIsoDate(value: string): string | null {
   const dayFirst = new RegExp(
@@ -97,6 +105,18 @@ function toIsoDate(value: string): string | null {
     }
   }
 
+  // "DICIEMBRE 2020" o "Abril de 2022": se asume el día 1.
+  const monthYear = new RegExp(
+    `(${MONTH_WORD})\\s*(?:de(?:l)?\\s*)?(${YEAR})`,
+    'i',
+  ).exec(value);
+  if (monthYear) {
+    const month = MONTHS[monthYear[1].toLowerCase()];
+    if (month) {
+      return `${monthYear[2]}-${month}-01`;
+    }
+  }
+
   const dmy = /(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(value);
   if (dmy) {
     return `${dmy[3]}-${dmy[2].padStart(2, '0')}-${dmy[1].padStart(2, '0')}`;
@@ -113,9 +133,14 @@ function toIsoDate(value: string): string | null {
 // Acepta que la etiqueta y el valor estén separados por saltos de línea o
 // espacios, pero no por otro texto con contenido.
 const SEPARATOR = '[^A-Za-z0-9]{0,32}';
+const HEADER_MAX_LINES = 60;
 
 const TITLE_PREFIX =
   /^(procedimiento|t[ií]tulo|nombre|documento)\s*:\s*(.+)$/i;
+
+// Palabras con las que suelen empezar los títulos de los formatos.
+const TITLE_KEYWORD =
+  /^(gu[ií]a|protocolo|procedimiento|manual|plan|formato|instructivo|programa|pol[ií]tica|reglamento|perfil)\b/i;
 
 /**
  * Algunos formatos escriben el título con un prefijo ("Procedimiento: ...") y
@@ -203,10 +228,18 @@ function findTitle(lines: string[]): string | null {
   const prefixed = findPrefixedTitle(lines, headerIndex);
   if (prefixed) return prefixed;
 
-  const candidates = lines
+  const allCandidates = lines
     .slice(0, headerIndex)
     .map((line) => line.replace(/[|]+/g, ' ').trim())
     .filter(Boolean);
+
+  // Si antes del título quedó algún fragmento suelto, se empieza en la primera
+  // línea que parece el inicio del título ("GUÍA...", "PROTOCOLO...", etc.).
+  const keywordIndex = allCandidates.findIndex((line) =>
+    TITLE_KEYWORD.test(line),
+  );
+  const candidates =
+    keywordIndex > 0 ? allCandidates.slice(keywordIndex) : allCandidates;
 
   // El título puede ocupar varias líneas: en mayúsculas, o en texto normal
   // cuando la plantilla no lo destaca. Se prefiere el bloque en mayúsculas.
@@ -235,7 +268,12 @@ function extractCode(text: string): string | null {
   );
   const code = match?.[1];
   if (code && !CODE_STOPWORDS.test(code)) {
-    if (code.length >= 3 || /[0-9\-–]/.test(code)) {
+    const followingChar = window[match[0].length] ?? '';
+    const isPartialWord = /[A-Za-zÁÉÍÓÚÑÜáéíóúñü]/.test(followingChar);
+    if (
+      !isPartialWord &&
+      (code.length >= 3 || /[0-9\-–]/.test(code))
+    ) {
       return completeCode(code, text, start + match[0].length);
     }
   }
@@ -291,16 +329,22 @@ function extractVersion(text: string): string | null {
 
   const start = label.index + label[0].length;
   const end = Math.min(headerBlockEnd(text, start), start + 200);
-  // Se quitan las fechas para no confundir el año o el día con la versión.
-  const block = text
-    .slice(start, end)
-    .replace(new RegExp(DATE_VALUE, 'gi'), ' ');
+  // Se miran las primeras líneas después de la etiqueta: el valor suele estar
+  // en la misma línea o en la siguiente, antes de otra etiqueta o de una fecha.
+  const lines = text.slice(start, end).split('\n').slice(0, 3);
 
-  const decimal = /\b\d{1,3}\.\d{1,3}\b/.exec(block);
-  if (decimal) return decimal[0];
+  for (const line of lines) {
+    const pure = /^\s*(\d{1,3}(?:\.\d{1,3})*)\s*$/.exec(line);
+    if (pure) return formatVersion(pure[1]);
 
-  for (const match of block.matchAll(/\b\d{1,3}\b/g)) {
-    const after = block.slice(
+    const decimal = /\b\d{1,3}\.\d{1,3}\b/.exec(line);
+    if (decimal) return decimal[0];
+  }
+
+  // Valor en la misma línea que la etiqueta ("VERSIÓN: 1 FECHA: ...").
+  const firstLine = lines[0] ?? '';
+  for (const match of firstLine.matchAll(/\b\d{1,3}\b/g)) {
+    const after = firstLine.slice(
       match.index + match[0].length,
       match.index + match[0].length + 6,
     );
@@ -344,11 +388,45 @@ function trimTitleBoilerplate(title: string): string {
     .trim();
 }
 
+/**
+ * El total de páginas se toma de la misma línea del marcador ("HOJA: 1 DE: 5").
+ * Si el documento no lo trae, se usa el total real del PDF.
+ */
+function extractPageCount(text: string): number | null {
+  for (const line of text.split('\n')) {
+    const match =
+      /\b(?:p[áa]gina|hoja)\b\s*[:-]?\s*\d{1,4}\s*(?:de|\/)\s*:?\s*(\d{1,4})/i.exec(
+        line,
+      );
+    if (match) return Number(match[1]);
+  }
+  return null;
+}
+
 export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
   // El encabezado normalizado de los formatos del hospital está en la primera
   // página; usar el resto del documento solo aportaría texto de cuerpo.
-  const text = normalizeHeaderText(pages[0] ?? '');
-  const lines = text.split('\n').filter(Boolean);
+  const fullText = normalizeHeaderText(pages[0] ?? '');
+  // El encabezado está al inicio; limitar la búsqueda evita tomar texto del
+  // cuerpo del documento (por ejemplo en Word sin encabezado normalizado).
+  const lines = fullText
+    .split('\n')
+    .filter(Boolean)
+    .slice(0, HEADER_MAX_LINES);
+  const headerIndex = lines.findIndex((line) => METADATA_LABEL.test(line));
+
+  if (headerIndex < 0) {
+    return {
+      title: null,
+      code: null,
+      version: null,
+      elaborationDate: null,
+      updateDate: null,
+      pageCount: extractPageCount(lines.join('\n')),
+    };
+  }
+
+  const text = lines.join('\n');
 
   const code = extractCode(text);
 
@@ -374,6 +452,15 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
     'i',
   ).exec(text)?.[1];
 
+  // Algunas plantillas usan solo "FECHA:" como fecha de elaboración.
+  if (!elaborationRaw && !updateRaw) {
+    const bare = /\bfecha\b\s*:\s*/i.exec(text);
+    if (bare) {
+      elaborationRaw =
+        findDateInHeaderBlock(text, bare.index + bare[0].length) ?? undefined;
+    }
+  }
+
   // En algunas plantillas el valor de la fecha de actualización queda después
   // de la versión. Se busca una única fecha dentro del bloque de encabezado,
   // deteniéndose en el marcador de página o el inicio del contenido.
@@ -385,7 +472,7 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
       ) ?? undefined;
   }
 
-  const pageMatch = /\b(?:p[áa]gina|hoja)\b\s*[:-]?\s*(\d{1,4})\s*(?:de|\/)\s*:?\s*(\d{1,4})/i.exec(text);
+  const pageCount = extractPageCount(text);
 
   const rawTitle = findTitle(lines);
 
@@ -396,6 +483,6 @@ export function parseDocumentHeader(pages: string[]): DocumentHeaderFields {
     version: version ?? null,
     elaborationDate: elaborationRaw ? toIsoDate(elaborationRaw) : null,
     updateDate: updateRaw ? toIsoDate(updateRaw) : null,
-    pageCount: pageMatch ? Number(pageMatch[2]) : null,
+    pageCount,
   };
 }

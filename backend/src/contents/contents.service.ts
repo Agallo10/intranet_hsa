@@ -19,6 +19,7 @@ import {
   parseDocumentHeader,
 } from './header-extraction.js';
 import { extractPdfText } from './pdf-text.js';
+import { extractDocxText } from './docx-text.js';
 import { resolveUploadDir, resolveUploadPath } from '../common/storage.js';
 import { Role } from '../common/role.enum.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
@@ -38,6 +39,9 @@ export interface ListContentsQuery {
   limit?: number;
   scope?: 'mine';
 }
+
+const DOCX_MIME =
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
 export interface ContentHeaderExtraction extends DocumentHeaderFields {
   supported: boolean;
@@ -356,7 +360,10 @@ export class ContentsService {
         this.maxFileSizeBytes(),
       );
 
-      if (file.mimetype !== 'application/pdf') {
+      const isPdf = file.mimetype === 'application/pdf';
+      const isDocx = file.mimetype === DOCX_MIME;
+
+      if (!isPdf && !isDocx) {
         return {
           supported: false,
           title: null,
@@ -366,7 +373,7 @@ export class ContentsService {
           updateDate: null,
           pageCount: null,
           message:
-            'La lectura automática del encabezado solo está disponible para archivos PDF',
+            'La lectura automática del encabezado solo está disponible para archivos PDF y Word (.docx)',
         };
       }
 
@@ -374,11 +381,20 @@ export class ContentsService {
 
       const buffer = await readFile(file.path);
       let pages: string[];
-      let totalPages: number;
-      try {
-        ({ pages, totalPages } = await extractPdfText(buffer));
-      } catch {
-        throw new BadRequestException('No se pudo leer el archivo PDF');
+      let totalPages: number | null = null;
+
+      if (isPdf) {
+        try {
+          ({ pages, totalPages } = await extractPdfText(buffer));
+        } catch {
+          throw new BadRequestException('No se pudo leer el archivo PDF');
+        }
+      } else {
+        try {
+          pages = [await extractDocxText(buffer)];
+        } catch {
+          throw new BadRequestException('No se pudo leer el archivo Word');
+        }
       }
 
       const fields = parseDocumentHeader(pages);
@@ -389,7 +405,9 @@ export class ContentsService {
         ...fields,
         pageCount: fields.pageCount ?? totalPages,
         message: !hasText
-          ? 'El PDF no tiene texto seleccionable (parece escaneado); completá los datos manualmente'
+          ? isPdf
+            ? 'El PDF no tiene texto seleccionable (parece escaneado); completá los datos manualmente'
+            : 'El documento no tiene texto legible; completá los datos manualmente'
           : fields.code || fields.title || fields.elaborationDate
             ? null
             : 'No se reconoció el encabezado del documento; completá los datos manualmente',
