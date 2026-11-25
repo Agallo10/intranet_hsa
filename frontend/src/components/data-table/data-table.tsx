@@ -27,6 +27,8 @@ interface DataTableProps<TData extends RowData> {
   initialSorting?: SortingState
   /** Clase de altura máxima: si se indica, la tabla hace scroll interno. */
   maxHeightClass?: string
+  /** Ocupa todo el alto disponible del contenedor (con scroll interno). */
+  fillHeight?: boolean
 }
 
 export function DataTable<TData extends RowData>({
@@ -36,6 +38,7 @@ export function DataTable<TData extends RowData>({
   emptyMessage = 'No hay resultados',
   initialSorting = [],
   maxHeightClass,
+  fillHeight = false,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
   const [globalFilter, setGlobalFilter] = useState('')
@@ -58,8 +61,10 @@ export function DataTable<TData extends RowData>({
     },
   })
 
+  const scrolls = fillHeight || Boolean(maxHeightClass)
+
   return (
-    <div className="space-y-3">
+    <div className={cn('space-y-3', fillHeight && 'flex min-h-0 flex-1 flex-col')}>
       {searchPlaceholder && (
         <Input
           placeholder={searchPlaceholder}
@@ -68,13 +73,22 @@ export function DataTable<TData extends RowData>({
           className="max-w-sm"
         />
       )}
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div
+        className={cn(
+          'overflow-hidden rounded-lg border bg-card',
+          fillHeight && 'min-h-0 flex-1',
+        )}
+      >
         <Table
           containerClassName={
-            maxHeightClass ? cn('overflow-auto overscroll-contain', maxHeightClass) : undefined
+            fillHeight
+              ? 'h-full overflow-auto overscroll-contain'
+              : maxHeightClass
+                ? cn('overflow-auto overscroll-contain', maxHeightClass)
+                : undefined
           }
         >
-          <TableHeader className={maxHeightClass ? 'sticky top-0 z-10 bg-card' : undefined}>
+          <TableHeader className={scrolls ? 'sticky top-0 z-10 bg-card' : undefined}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="bg-muted/50 hover:bg-muted/50">
                 {headerGroup.headers.map((header) => (

@@ -270,8 +270,8 @@ export function Documentos() {
   const showTitle = configuredColumns.includes('title')
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="flex h-[calc(100dvh-3rem)] min-h-0 flex-col">
+      <div className="mb-6 flex shrink-0 items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Documentos</h1>
           <p className="text-sm text-muted-foreground">
@@ -298,7 +298,7 @@ export function Documentos() {
         searchPlaceholder="Buscar documento..."
         emptyMessage="No hay documentos"
         initialSorting={showTitle ? [{ id: 'title', desc: false }] : []}
-        maxHeightClass="max-h-[calc(100vh-17rem)]"
+        fillHeight
       />
 
       {canPublish && (
