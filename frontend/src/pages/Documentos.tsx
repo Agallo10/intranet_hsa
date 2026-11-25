@@ -298,6 +298,7 @@ export function Documentos() {
         searchPlaceholder="Buscar documento..."
         emptyMessage="No hay documentos"
         initialSorting={showTitle ? [{ id: 'title', desc: false }] : []}
+        maxHeightClass="max-h-[calc(100vh-17rem)]"
       />
 
       {canPublish && (

@@ -25,6 +25,8 @@ interface DataTableProps<TData extends RowData> {
   searchPlaceholder?: string
   emptyMessage?: string
   initialSorting?: SortingState
+  /** Clase de altura máxima: si se indica, la tabla hace scroll interno. */
+  maxHeightClass?: string
 }
 
 export function DataTable<TData extends RowData>({
@@ -33,6 +35,7 @@ export function DataTable<TData extends RowData>({
   searchPlaceholder,
   emptyMessage = 'No hay resultados',
   initialSorting = [],
+  maxHeightClass,
 }: DataTableProps<TData>) {
   const [sorting, setSorting] = useState<SortingState>(initialSorting)
   const [globalFilter, setGlobalFilter] = useState('')
@@ -66,8 +69,12 @@ export function DataTable<TData extends RowData>({
         />
       )}
       <div className="overflow-hidden rounded-lg border bg-card">
-        <Table>
-          <TableHeader>
+        <Table
+          containerClassName={
+            maxHeightClass ? cn('overflow-auto overscroll-contain', maxHeightClass) : undefined
+          }
+        >
+          <TableHeader className={maxHeightClass ? 'sticky top-0 z-10 bg-card' : undefined}>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id} className="bg-muted/50 hover:bg-muted/50">
                 {headerGroup.headers.map((header) => (
