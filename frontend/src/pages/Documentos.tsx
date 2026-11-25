@@ -57,6 +57,9 @@ function formatDate(value: string): string {
 
 const isPdf = (mime: string | null) => mime === 'application/pdf'
 
+const isPdfFile = (file: File) =>
+  file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
+
 function fileTypeLabel(mime: string | null): string {
   if (!mime) return '—'
   if (mime === 'application/pdf') return 'PDF'
@@ -601,10 +604,40 @@ function DocumentUploadDialog({
   const [error, setError] = useState<string | null>(null)
   const [headerMessage, setHeaderMessage] = useState<string | null>(null)
   const [readingHeader, setReadingHeader] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [selectedFile, setSelectedFile] = useState<{
+    name: string
+    isPdf: boolean
+  } | null>(null)
   const extractionId = useRef(0)
+  const previewUrlRef = useRef<string | null>(null)
   const autoFilled = useRef<
     Partial<Record<'title' | 'code' | 'version' | 'elaborationDate' | 'updateDate', string>>
   >({})
+
+  useEffect(() => {
+    return () => {
+      if (previewUrlRef.current) {
+        URL.revokeObjectURL(previewUrlRef.current)
+      }
+    }
+  }, [])
+
+  function updatePreview(file: File | null) {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
+    }
+    if (file && isPdfFile(file)) {
+      previewUrlRef.current = URL.createObjectURL(file)
+      setPreviewUrl(previewUrlRef.current)
+    } else {
+      setPreviewUrl(null)
+    }
+    setSelectedFile(
+      file ? { name: file.name, isPdf: isPdfFile(file) } : null,
+    )
+  }
 
   const {
     register,
@@ -643,6 +676,7 @@ function DocumentUploadDialog({
       setError(null)
       setHeaderMessage(null)
       autoFilled.current = {}
+      updatePreview(null)
       reset()
       if (fileRef.current) fileRef.current.value = ''
       onOpenChange(false)
@@ -654,6 +688,7 @@ function DocumentUploadDialog({
   async function onFileSelected(event: ChangeEvent<HTMLInputElement>) {
     setHeaderMessage(null)
     const file = event.target.files?.[0]
+    updatePreview(file ?? null)
     if (!file) return
 
     const requestId = ++extractionId.current
@@ -741,12 +776,23 @@ function DocumentUploadDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          updatePreview(null)
+          if (fileRef.current) fileRef.current.value = ''
+        }
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[1100px]">
         <DialogHeader>
           <DialogTitle>Subir documento</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,480px)]">
+            <div className="min-w-0 space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="doc-title">Título</Label>
             <Input id="doc-title" {...register('title')} />
@@ -841,6 +887,32 @@ function DocumentUploadDialog({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
+            </div>
+
+            <div className="min-w-0 space-y-1.5">
+              <Label>Vista previa</Label>
+              {selectedFile && previewUrl ? (
+                <>
+                  <iframe
+                    src={previewUrl}
+                    title={`Vista previa de ${selectedFile.name}`}
+                    className="h-[65vh] w-full rounded-md border"
+                  />
+                  <p className="truncate text-xs text-muted-foreground">
+                    {selectedFile.name}
+                  </p>
+                </>
+              ) : (
+                <div className="flex h-[65vh] flex-col items-center justify-center rounded-md border border-dashed px-4 text-center text-sm text-muted-foreground">
+                  <FileText className="mb-2 size-8 opacity-40" />
+                  {selectedFile
+                    ? 'La vista previa solo está disponible para PDF.'
+                    : 'Seleccioná un PDF para ver la vista previa.'}
+                </div>
+              )}
+            </div>
+          </div>
 
           <DialogFooter>
             <Button
