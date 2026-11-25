@@ -25,6 +25,7 @@ import { Role } from '../common/role.enum.js';
 import { AuthUser } from '../common/guards/roles.guard.js';
 import { CategoriesService } from '../categories/categories.service.js';
 import { Curso } from '../courses/curso.entity.js';
+import { Category } from '../categories/category.entity.js';
 import { Area } from '../areas/area.entity.js';
 import { ContentType } from '../common/content-type.enum.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -298,16 +299,22 @@ export class ContentsService {
         if (dto.categoryId) {
           await this.assertCategoryValid(dto.categoryId);
           content.categoryId = dto.categoryId;
+          // También se actualiza la relación cargada: si solo cambia la
+          // columna, TypeORM guarda el id de la relación anterior.
+          content.category = { id: dto.categoryId } as Category;
         } else {
           content.categoryId = null;
+          content.category = null;
         }
       }
       if (dto.areaId !== undefined) {
         if (dto.areaId) {
           await this.assertAreaValid(dto.areaId);
           content.areaId = dto.areaId;
+          content.area = { id: dto.areaId } as Area;
         } else {
           content.areaId = null;
+          content.area = null;
         }
       }
       if (dto.isPublished !== undefined) content.isPublished = dto.isPublished;
